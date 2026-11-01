@@ -96,10 +96,11 @@
     .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color:#0b0e22; }
     .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color:#0b0e22; }
     .maplibregl-popup-close-button { color:#94a3b8; font-size:20px; padding:2px 8px; }
-    .poi-pop { min-width:220px; padding-right:14px; }
+    .poi-pop { min-width:220px; padding-right:14px; overflow-wrap:anywhere; max-height:62vh; overflow-y:auto; }
+    .poi-pop .poi-det { line-height:1.4; }
     .poi-btn { display:flex; align-items:center; justify-content:center; gap:4px; min-height:36px; padding:6px 8px; border-radius:10px;
                background:#1e293b; border:1px solid #334155; color:#e6f0ff; font-size:12px; font-weight:700; text-decoration:none; text-align:center;
-               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+               white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
     .poi-btn:active { transform:scale(.97); }
 
     /* KI-Beifahrer */
@@ -839,7 +840,8 @@ function poiPopup(f) {
     <div class="poi-det mt-1 text-xs text-slate-400">Details werden geladen…</div>
     <div class="poi-info mt-2 grid grid-cols-2 gap-1.5 empty:hidden"></div>
     <div class="poi-links mt-1.5 grid grid-cols-2 gap-1.5"></div>`;
-  const pop = new maplibregl.Popup({ offset: 16, maxWidth: '300px' }).setLngLat([lng, lat]).setDOMContent(div).addTo(map);
+  // Breite an den Bildschirm anpassen, damit nichts über den Rand ragt
+  const pop = new maplibregl.Popup({ offset: 16, maxWidth: 'min(320px, calc(100vw - 24px))' }).setLngLat([lng, lat]).setDOMContent(div).addTo(map);
   div.querySelector('.poi-fav').onclick = () => { pop.remove(); openFavModal(place); };
 
   // Bewertungen gibt es nicht frei – daher direkt zu Google bzw. Apple Karten verlinken
@@ -877,7 +879,7 @@ function poiPopup(f) {
     const phone = String(t.phone || t['contact:phone'] || '').split(';')[0].trim();
     const menu = safeUrl(t['website:menu']);
     const extra = [], half = phone && menu ? '' : ' col-span-2';
-    if (web) extra.push(`<a class="poi-btn col-span-2" target="_blank" rel="noopener" href="${esc(web)}">🌐 ${esc(shortUrl(web).slice(0, 34))}</a>`);
+    if (web) extra.push(`<a class="poi-btn col-span-2" target="_blank" rel="noopener" href="${esc(web)}">🌐 ${esc(shortUrl(web))}</a>`);
     if (phone) extra.push(`<a class="poi-btn${half}" href="tel:${esc(phone.replace(/[^\d+]/g, ''))}">📞 ${half ? esc(phone) : 'Anrufen'}</a>`);
     if (menu) extra.push(`<a class="poi-btn${half}" target="_blank" rel="noopener" href="${esc(menu)}">📋 Speisekarte</a>`);
     div.querySelector('.poi-info').innerHTML = extra.join('');
