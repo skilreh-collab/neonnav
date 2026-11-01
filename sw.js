@@ -1,5 +1,5 @@
 // NeonNav Service Worker – macht die App installierbar und offline startfähig
-const VERSION = 'neonnav-v5';
+const VERSION = 'neonnav-v6';
 const TILE_CACHE = 'neonnav-tiles-v1';
 const MAX_TILES = 2500;
 
@@ -11,8 +11,8 @@ const CDN = [
 ];
 // Live-Daten nie aus dem Cache: Routing, Suche, Blitzer, Spritpreise, KI
 const LIVE_HOSTS = ['routing.openstreetmap.de', 'router.project-osrm.org', 'nominatim.openstreetmap.org',
-                    'overpass-api.de', 'overpass.kumi.systems', 'creativecommons.tankerkoenig.de',
-                    'generativelanguage.googleapis.com'];
+                    'overpass-api.de', 'overpass.kumi.systems', 'maps.mail.ru', 'overpass.private.coffee',
+                    'creativecommons.tankerkoenig.de', 'generativelanguage.googleapis.com', 'api.open-meteo.com'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(async c => {

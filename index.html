@@ -61,6 +61,19 @@
     .haz-mk::before { content:''; position:absolute; inset:-2px; border-radius:50%; border:2px solid rgba(255,23,68,.85); animation:pulseRing 1.8s infinite; pointer-events:none; }
     .haz-g { background:radial-gradient(circle,#ffab00,#c25e00); box-shadow:0 0 16px rgba(255,171,0,.9); }
     .haz-g::before { border-color:rgba(255,171,0,.85); }
+    .park-mk { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font:900 20px Inter, sans-serif; color:#fff; cursor:pointer;
+               background:linear-gradient(135deg,#2563eb,#1d4ed8); border:2px solid #fff; box-shadow:0 0 18px rgba(37,99,235,.9); }
+    .ghost-mk { font-size:30px; filter:drop-shadow(0 0 10px rgba(167,139,250,.95)); opacity:.85; pointer-events:none; }
+    .fuel-mk { padding:3px 7px; border-radius:10px; font:800 12px Orbitron, Inter, sans-serif; color:#05060f; background:#a3ff12; border:2px solid #fff;
+               box-shadow:0 0 14px rgba(163,255,18,.7); white-space:nowrap; cursor:pointer; }
+    .fuel-mk.best { background:#00e5ff; box-shadow:0 0 18px rgba(0,229,255,.95); }
+    .fuel-mk.meh { background:#cbd5e1; box-shadow:none; }
+    #limitSign { position:absolute; top:-14px; right:-14px; width:46px; height:46px; border-radius:50%; background:#fff; border:5px solid #e11d48;
+                 color:#000; font:900 17px Orbitron, Inter, sans-serif; display:grid; place-items:center; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+    #limitSign.over { animation:blink .6s infinite; box-shadow:0 0 22px rgba(225,29,72,.95); }
+    #gauge.over #gSpeed { color:#fb7185; }
+    @keyframes achIn { 0% { transform:translate(-50%,-30px) scale(.8); opacity:0; } 12% { transform:translate(-50%,0) scale(1.04); opacity:1; } 18% { transform:translate(-50%,0) scale(1); } 88% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-10px); } }
+    #achPop.show { animation:achIn 4.2s ease forwards; }
     .dest-mk { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; font-size:20px; border:3px solid #fff;
                background:linear-gradient(135deg,#ff2bd6,#7c3aed); box-shadow:0 0 22px rgba(255,43,214,.95); }
 
@@ -99,6 +112,8 @@
                 color:#a5f3fc; font-weight:700; }
     .ai-src { display:block; margin-top:8px; padding-top:6px; border-top:1px solid rgba(148,163,184,.2); font-size:11px; color:#94a3b8; }
     .ai-src a { color:#a5f3fc; text-decoration:underline; }
+    @keyframes micPulse { 0% { box-shadow:0 0 0 0 rgba(236,72,153,.7); } 100% { box-shadow:0 0 0 14px rgba(236,72,153,0); } }
+    #aiMic.listening { background:linear-gradient(135deg,#ec4899,#ef4444); border-color:#fda4af; animation:micPulse 1.1s infinite; }
     .ai-chip { flex-shrink:0; height:36px; padding:0 12px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap;
                background:#151a33; border:1px solid rgba(167,139,250,.35); color:#e9d5ff; }
     @keyframes aiDots { 0%, 80%, 100% { opacity:.25; } 40% { opacity:1; } }
@@ -124,6 +139,7 @@
     </div>
     <div class="mt-1 flex justify-between gap-2 text-[10px]">
       <span id="rank" class="pink-text font-game">ROOKIE</span>
+      <span id="wxNow" class="text-slate-300 font-semibold"></span>
       <span id="gpsText" class="text-slate-500">Suche GPS…</span>
     </div>
   </div>
@@ -177,6 +193,19 @@
   </div>
 </div>
 
+<!-- ===================== Erfolg freigeschaltet ===================== -->
+<div id="achPop" class="fixed left-1/2 z-[70] pointer-events-none opacity-0" style="top:calc(max(10px, env(safe-area-inset-top)) + 8px);transform:translateX(-50%)">
+  <div class="flex items-center gap-3 rounded-2xl px-4 py-3 min-w-[260px] max-w-[92vw]"
+       style="background:linear-gradient(135deg,#1e1b4b,#3b0764);border:2px solid #facc15;box-shadow:0 0 34px rgba(250,204,21,.55)">
+    <div id="achPopIcon" class="text-4xl leading-none">🏆</div>
+    <div class="min-w-0">
+      <div class="text-[10px] uppercase tracking-[.25em] text-yellow-300 font-game">Erfolg freigeschaltet</div>
+      <div id="achPopTitle" class="font-game font-black text-lg text-white truncate"></div>
+      <div id="achPopSub" class="text-xs text-slate-300 truncate"></div>
+    </div>
+  </div>
+</div>
+
 <!-- ===================== Toast ===================== -->
 <div id="toast" class="fixed left-1/2 z-[60] max-w-[90vw] rounded-full px-4 py-2 font-semibold text-sm text-center pointer-events-none opacity-0"
      style="top:calc(max(10px, env(safe-area-inset-top)) + 70px);transform:translate(-50%,8px);background:#e6f0ff;color:#05060f;box-shadow:0 0 24px rgba(0,229,255,.5)"></div>
@@ -194,6 +223,7 @@
     <circle id="gArc" cx="50" cy="50" r="42" fill="none" stroke="url(#gGrad)" stroke-width="7" stroke-linecap="round"
             stroke-dasharray="0 999" transform="rotate(135 50 50)" style="filter:drop-shadow(0 0 4px rgba(0,229,255,.8));transition:stroke-dasharray .8s linear"/>
   </svg>
+  <div id="limitSign" class="hidden"></div>
   <div class="absolute inset-0 flex flex-col items-center justify-center">
     <div id="gSpeed" class="font-game text-[34px] font-black leading-none text-white">–</div>
     <div class="text-[10px] text-slate-400 font-game">km/h</div>
@@ -222,6 +252,7 @@
       <button id="installBtn" class="hidden h-9 px-3 rounded-xl bg-cyan-300 text-black font-bold text-xs">INSTALLIEREN</button>
       <button id="installClose" class="h-9 w-9 rounded-xl bg-slate-800">✕</button>
     </div>
+    <div id="favChips" class="flex gap-2 overflow-x-auto scroll-none mt-2"></div>
     <div id="recentChips" class="flex gap-2 overflow-x-auto scroll-none mt-2"></div>
     <button id="freeBtn" class="mt-2 w-full h-12 rounded-2xl font-game font-bold text-sm tracking-wider text-black"
             style="background:linear-gradient(90deg,var(--lime),#5effc4);box-shadow:0 0 20px rgba(163,255,18,.4)">🏁 FREIE FAHRT</button>
@@ -237,9 +268,13 @@
         <div id="destName" class="text-xl font-extrabold truncate"></div>
         <div id="destSub" class="text-sm text-slate-400 truncate"></div>
       </div>
-      <button id="previewClose" class="shrink-0 h-10 w-10 rounded-full bg-slate-800 text-lg" aria-label="Abbrechen">✕</button>
+      <div class="shrink-0 flex gap-2">
+        <button id="favBtn" class="h-10 w-10 rounded-full bg-slate-800 text-lg" aria-label="Als Favorit speichern">☆</button>
+        <button id="previewClose" class="h-10 w-10 rounded-full bg-slate-800 text-lg" aria-label="Abbrechen">✕</button>
+      </div>
     </div>
     <div id="routeCards" class="mt-3 space-y-2"></div>
+    <div id="routeExtras" class="hidden mt-2 space-y-1.5"></div>
     <button id="goBtn" class="mt-3 w-full h-16 rounded-2xl font-game font-black text-2xl text-black glow-btn"
             style="background:linear-gradient(90deg,var(--neon),#7cf8ff)">LOS ▶</button>
   </div>
@@ -248,6 +283,7 @@
 <!-- ===================== Sheet: Fahrt ===================== -->
 <div id="driveSheet" class="sheet hidden fixed bottom-0 inset-x-0 z-20 safe-bottom px-3">
   <div id="driveCard" class="mx-auto max-w-md panel rounded-3xl p-3">
+    <div id="ghostLine" class="hidden mb-2 text-sm font-bold px-1"></div>
     <div id="hazNext" class="hidden mb-2 text-sm font-semibold text-red-300 px-1"></div>
     <div class="flex items-center gap-3">
       <div class="flex-1 grid grid-cols-3 text-center">
@@ -281,8 +317,15 @@
       </div>
       <button id="historyClose" class="h-11 w-11 rounded-full bg-slate-800 text-xl" aria-label="Schließen">✕</button>
     </div>
+    <div id="histTabs" class="px-3 pb-2 grid grid-cols-3 gap-1.5">
+      <button data-tab="trips" class="h-10 rounded-xl text-xs font-bold border">🛣️ Fahrten</button>
+      <button data-tab="stats" class="h-10 rounded-xl text-xs font-bold border">📊 Statistik</button>
+      <button data-tab="ach" class="h-10 rounded-xl text-xs font-bold border">🏆 Erfolge</button>
+    </div>
     <div id="historyList" class="overflow-y-auto px-3 pb-3 space-y-2 flex-1"></div>
-    <div class="border-t border-slate-800 px-4 py-3 flex items-center justify-between gap-2">
+    <div id="statsPane" class="hidden overflow-y-auto px-3 pb-3 flex-1"></div>
+    <div id="achPane" class="hidden overflow-y-auto px-3 pb-3 flex-1"></div>
+    <div id="histFoot" class="border-t border-slate-800 px-4 py-3 flex items-center justify-between gap-2">
       <span id="hazCount" class="text-sm text-slate-400"></span>
       <button id="clearHazBtn" class="h-10 px-3 rounded-xl bg-slate-800 text-red-300 text-sm font-semibold">Meldungen löschen</button>
     </div>
@@ -394,6 +437,21 @@
   </div>
 </div>
 
+<!-- ===================== Favorit speichern ===================== -->
+<div id="favModal" class="hidden fixed inset-0 z-[55] bg-black/70 backdrop-blur-sm flex items-center justify-center modal-wrap">
+  <div class="w-full max-w-sm rounded-3xl panel p-4" style="background:#0a0c1e">
+    <h2 class="font-game text-lg font-black neon-text">⭐ MERKEN</h2>
+    <p id="favName" class="text-sm text-slate-300 mt-1 truncate"></p>
+    <div class="mt-3 grid grid-cols-3 gap-2">
+      <button data-ft="home" class="fav-opt h-16 rounded-2xl bg-slate-900 border border-slate-700 font-bold text-sm flex flex-col items-center justify-center"><span class="text-2xl">🏠</span>Zuhause</button>
+      <button data-ft="work" class="fav-opt h-16 rounded-2xl bg-slate-900 border border-slate-700 font-bold text-sm flex flex-col items-center justify-center"><span class="text-2xl">💼</span>Arbeit</button>
+      <button data-ft="fav" class="fav-opt h-16 rounded-2xl bg-slate-900 border border-slate-700 font-bold text-sm flex flex-col items-center justify-center"><span class="text-2xl">⭐</span>Favorit</button>
+    </div>
+    <button id="favRemove" class="hidden mt-2 w-full h-11 rounded-xl bg-slate-800 text-red-300 font-semibold text-sm">🗑 Aus Favoriten entfernen</button>
+    <button id="favCancel" class="mt-2 w-full h-11 rounded-xl bg-slate-800 font-semibold text-sm">Abbrechen</button>
+  </div>
+</div>
+
 <!-- ===================== KI-Beifahrer ===================== -->
 <div id="aiModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center modal-wrap">
   <div class="w-full max-w-md h-full max-h-[680px] flex flex-col rounded-3xl panel pb-2" style="background:#0a0c1e">
@@ -412,6 +470,7 @@
     <form id="aiForm" class="px-3 pt-2 flex gap-2">
       <input id="aiInput" type="text" autocomplete="off" enterkeyhint="send" placeholder="Frag mich etwas…"
              class="flex-1 min-w-0 h-12 rounded-2xl bg-slate-900 border border-violet-400/40 px-4 text-white outline-none focus:border-violet-300">
+      <button id="aiMic" type="button" class="hidden h-12 w-12 rounded-2xl bg-slate-800 border border-violet-400/40 text-xl" aria-label="Spracheingabe">🎙️</button>
       <button id="aiSend" type="submit" class="h-12 w-12 rounded-2xl text-xl font-black text-white" style="background:linear-gradient(135deg,#6366f1,#ec4899)" aria-label="Senden">➤</button>
     </form>
   </div>
@@ -432,14 +491,17 @@ const LS = {
   vehicle: 'neonnav.vehicle.v1', prices: 'neonnav.prices.v1', tk: 'neonnav.tkkey.v1',
   cams: 'neonnav.osmcams.v1', osm: 'neonnav.osm.v1', install: 'neonnav.installhint.v1',
   theme: 'neonnav.theme.v1', voice: 'neonnav.voice.v1', pois: 'neonnav.pois.v1',
-  ai: 'neonnav.gemini.v1', aiModel: 'neonnav.geminimodel.v1'
+  ai: 'neonnav.gemini.v1', aiModel: 'neonnav.geminimodel.v1',
+  favs: 'neonnav.favs.v1', park: 'neonnav.park.v1', ach: 'neonnav.ach.v1', stats: 'neonnav.stats.v1',
+  explore: 'neonnav.explore.v1', ghosts: 'neonnav.ghosts.v1'
 };
 const ROUTERS = {
   car:  ['https://routing.openstreetmap.de/routed-car/route/v1/driving/', 'https://router.project-osrm.org/route/v1/driving/'],
   bike: ['https://routing.openstreetmap.de/routed-bike/route/v1/driving/'],
   foot: ['https://routing.openstreetmap.de/routed-foot/route/v1/driving/']
 };
-const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter'];
+const OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+                  'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 const TANKERKOENIG = 'https://creativecommons.tankerkoenig.de/json/list.php';
 const ALERT_R = 400, CLOSE_R = 150, REARM_R = 500, ROUTE_HAZ_R = 40;
 const DEFAULT_POS = { lat: 48.13743, lng: 11.57549 }; // München, Marienplatz
@@ -579,11 +641,16 @@ const srcCache = {};
 let firstStyle = true;
 map.on('style.load', () => {
   styleTweaks();
-  ['alts', 'route', 'trail', 'history', 'cams'].forEach(id => {
+  ['explore', 'alts', 'route', 'trail', 'history', 'cams'].forEach(id => {
     if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: srcCache[id] || emptyFC(), lineMetrics: id === 'route' });
   });
   const lay = { 'line-cap': 'round', 'line-join': 'round' };
   const day = curTheme === 'day';
+  map.addLayer({ id: 'explore-heat', type: 'heatmap', source: 'explore', paint: {
+    'heatmap-intensity': ['interpolate', ['linear'], ['zoom'], 5, .5, 15, 1.6],
+    'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 5, 3, 12, 9, 16, 22],
+    'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', .12, '#1d4ed8', .4, '#00e5ff', .7, '#a855f7', 1, '#ff2bd6'],
+    'heatmap-opacity': .9 } });
   map.addLayer({ id: 'alts-line', type: 'line', source: 'alts', layout: lay, paint: { 'line-color': day ? '#7c88b0' : '#5b6a9a', 'line-width': 8, 'line-opacity': .75 } });
   map.addLayer({ id: 'trail-line', type: 'line', source: 'trail', layout: lay, paint: { 'line-color': day ? '#4caf00' : '#a3ff12', 'line-width': 5, 'line-opacity': .85, 'line-blur': .5 } });
   map.addLayer({ id: 'history-glow', type: 'line', source: 'history', layout: lay, paint: { 'line-color': '#ff2bd6', 'line-width': 18, 'line-blur': 10, 'line-opacity': day ? .25 : .45 } });
@@ -766,12 +833,14 @@ function poiPopup(f) {
   const place = { name: p['name:de'] || p.name, sub: info.label, lat, lng };
   const div = document.createElement('div');
   div.className = 'poi-pop';
-  div.innerHTML = `<div class="font-bold text-base leading-tight">${info.emoji} ${esc(place.name)}</div>
+  div.innerHTML = `<div class="flex items-start gap-2"><div class="font-bold text-base leading-tight flex-1">${info.emoji} ${esc(place.name)}</div>
+      <button class="poi-fav shrink-0 -mt-0.5 text-lg leading-none" aria-label="Merken">${favAt(place) ? FAV_ICON[favAt(place).type] : '☆'}</button></div>
     <div class="text-xs text-slate-400 poi-cat">${esc(info.label)}</div>
     <div class="poi-det mt-1 text-xs text-slate-400">Details werden geladen…</div>
     <div class="poi-info mt-2 grid grid-cols-2 gap-1.5 empty:hidden"></div>
     <div class="poi-links mt-1.5 grid grid-cols-2 gap-1.5"></div>`;
   const pop = new maplibregl.Popup({ offset: 16, maxWidth: '300px' }).setLngLat([lng, lat]).setDOMContent(div).addTo(map);
+  div.querySelector('.poi-fav').onclick = () => { pop.remove(); openFavModal(place); };
 
   // Bewertungen gibt es nicht frei – daher direkt zu Google bzw. Apple Karten verlinken
   const qs = encodeURIComponent(place.name);
@@ -1055,14 +1124,14 @@ function speedFactor(kind, avg) {
 // Kosten für eine Strecke (m) bei Ø-Geschwindigkeit (km/h)
 function costFor(m, avgKmh, v = vehicle) {
   const km = m / 1000;
-  if (v.kind === 'bike') return { eur: 0, text: '0 €', extra: `🔥 ~${Math.round(km * 25)} kcal` };
-  if (v.kind === 'foot') return { eur: 0, text: '0 €', extra: `🔥 ~${Math.round(km * 55)} kcal` };
+  if (v.kind === 'bike') return { eur: 0, co2: 0, text: '0 €', extra: `🔥 ~${Math.round(km * 25)} kcal` };
+  if (v.kind === 'foot') return { eur: 0, co2: 0, text: '0 €', extra: `🔥 ~${Math.round(km * 55)} kcal` };
   const elec = v.fuel === 'electric';
   const amount = km * (+v.cons || 0) / 100 * speedFactor(v.kind, avgKmh || 50);
   const price = elec ? prices.kwh : prices[v.fuel];
   const eur = amount * (+price || 0), unit = elec ? 'kWh' : 'L';
   const co2 = amount * (CO2[v.fuel] || 2.37);
-  return { eur, text: fmtEur(eur), extra: `${amount.toFixed(amount < 10 ? 1 : 0).replace('.', ',')} ${unit} · ${co2.toFixed(co2 < 10 ? 1 : 0).replace('.', ',')} kg CO₂` };
+  return { eur, co2, text: fmtEur(eur), extra: `${amount.toFixed(amount < 10 ? 1 : 0).replace('.', ',')} ${unit} · ${co2.toFixed(co2 < 10 ? 1 : 0).replace('.', ',')} kg CO₂` };
 }
 function vehicleLabel(v = vehicle) {
   if (isFree(v)) return `${kindInfo(v.kind).icon} ${kindInfo(v.kind).label}`;
@@ -1230,6 +1299,195 @@ function maybeRefreshPrices() {
 }
 
 /* =================================================================
+   WETTER (Open-Meteo, kostenlos, ohne Schlüssel)
+   ================================================================= */
+const OPEN_METEO = 'https://api.open-meteo.com/v1/forecast';
+const wxCache = new Map();
+let wxNowAt = 0, wxNowPos = null;
+async function wxFetch(lat, lng) {
+  const key = lat.toFixed(2) + ':' + lng.toFixed(2), c = wxCache.get(key);
+  if (c && Date.now() - c.at < 30 * 60000) return c.data;
+  const r = await fetch(`${OPEN_METEO}?latitude=${lat.toFixed(3)}&longitude=${lng.toFixed(3)}&current=temperature_2m,weather_code,is_day,precipitation,wind_gusts_10m` +
+    '&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_gusts_10m,is_day&forecast_days=2&timezone=auto');
+  const j = await r.json();
+  if (!j.hourly) throw new Error('Kein Wetter');
+  wxCache.set(key, { at: Date.now(), data: j });
+  return j;
+}
+// Vorhersage für einen Zeitpunkt (nächste volle Stunde). Zeiten sind Ortszeit des Ortes → über utc_offset umrechnen.
+function wxAt(j, date) {
+  const h = j.hourly, off = (j.utc_offset_seconds || 0) * 1000, t = date.getTime();
+  let bi = 0, bd = Infinity;
+  h.time.forEach((s, i) => { const d = Math.abs(Date.parse(s + 'Z') - off - t); if (d < bd) { bd = d; bi = i; } });
+  return { temp: h.temperature_2m[bi], code: h.weather_code[bi], pp: h.precipitation_probability[bi], precip: h.precipitation[bi], gust: h.wind_gusts_10m[bi], day: h.is_day[bi] !== 0 };
+}
+function wxDesc(code, day = true) {
+  if (code === 0) return day ? ['☀️', 'Sonnig'] : ['🌙', 'Klar'];
+  if (code <= 2) return day ? ['🌤️', 'Leicht bewölkt'] : ['☁️', 'Leicht bewölkt'];
+  if (code === 3) return ['☁️', 'Bewölkt'];
+  if (code === 45 || code === 48) return ['🌫️', 'Nebel'];
+  if (code >= 51 && code <= 57) return ['🌦️', code >= 56 ? 'Gefrierender Niesel' : 'Nieselregen'];
+  if (code >= 61 && code <= 67) return ['🌧️', code >= 66 ? 'Gefrierender Regen' : code === 65 ? 'Starker Regen' : 'Regen'];
+  if ((code >= 71 && code <= 77) || code === 85 || code === 86) return ['🌨️', 'Schnee'];
+  if (code >= 80 && code <= 82) return ['🌦️', code === 82 ? 'Heftige Schauer' : 'Schauer'];
+  if (code >= 95) return ['⛈️', 'Gewitter'];
+  return ['🌡️', 'Wetter'];
+}
+function wxWarn(w) {
+  if (!w) return null;
+  if (w.code >= 95) return 'Gewitter';
+  if ([56, 57, 66, 67].includes(w.code)) return 'Glatteis durch gefrierenden Regen';
+  if ((w.code >= 71 && w.code <= 77) || w.code === 85 || w.code === 86) return 'Schnee – Glättegefahr';
+  if (w.temp <= 1 && (w.precip > 0 || w.code === 48 || w.pp >= 60)) return 'Glättegefahr';
+  if (w.gust >= 60) return `Sturmböen bis ${Math.round(w.gust)} km/h`;
+  if (w.precip >= 4 || w.code === 65 || w.code === 82) return 'Starkregen';
+  if (w.code === 45 || w.code === 48) return 'Nebel – Sicht eingeschränkt';
+  return null;
+}
+const wxLine = w => { const [i, t] = wxDesc(w.code, w.day); return `${i} ${Math.round(w.temp)} °C · ${t}${w.pp >= 30 ? ` · ${w.pp} % Regen` : ''}`; };
+
+async function updateWxNow(force) {
+  if (!S.pos) return;
+  if (!force && Date.now() - wxNowAt < 30 * 60000 && wxNowPos && haversine(wxNowPos.lat, wxNowPos.lng, S.pos.lat, S.pos.lng) < 5000) return;
+  wxNowAt = Date.now(); wxNowPos = { lat: S.pos.lat, lng: S.pos.lng };
+  try {
+    const j = await wxFetch(S.pos.lat, S.pos.lng), c = j.current;
+    const [icon, text] = wxDesc(c.weather_code, c.is_day !== 0);
+    S.wxNow = { icon, text, temp: c.temperature_2m, warn: wxWarn({ temp: c.temperature_2m, code: c.weather_code, pp: 0, precip: c.precipitation, gust: c.wind_gusts_10m }) };
+    $('wxNow').textContent = `${icon} ${Math.round(c.temperature_2m)}°`;
+    $('wxNow').title = text;
+  } catch (e) { wxNowAt = Date.now() - 25 * 60000; } // in 5 min erneut versuchen
+}
+
+// Wetter unterwegs (Mitte der Fahrt) und am Ziel zur Ankunftszeit
+async function routeWeather(N) {
+  S.routeWx = null;
+  try {
+    const mid = pointAlong(N, N.total / 2), end = N.coords[N.coords.length - 1];
+    const tMid = new Date(Date.now() + N.duration * 500), tEnd = new Date(Date.now() + N.duration * 1000);
+    const [jm, je] = await Promise.all([N.total > 20000 ? wxFetch(mid.lat, mid.lng) : null, wxFetch(end[1], end[0])]);
+    const dest = wxAt(je, tEnd), midW = jm ? wxAt(jm, tMid) : null;
+    S.routeWx = { dest, mid: midW, at: tEnd, warn: wxWarn(midW) || wxWarn(dest) };
+    renderRouteExtras();
+  } catch (e) {}
+}
+
+/* =================================================================
+   GÜNSTIGE TANKSTELLEN (Tankerkönig)
+   ================================================================= */
+let fuelMarkers = [], fuelOnRoute = [], fuelAnnounced = false;
+const fuelType = () => (!isFree(vehicle) && ['e5', 'e10', 'diesel'].includes(vehicle.fuel)) ? vehicle.fuel : null;
+const fmtPrice = p => p.toFixed(3).replace('.', ',');
+const fuelName = s => s.brand || s.name || 'Tankstelle';
+
+async function tkStations(lat, lng, rad) {
+  const ft = fuelType();
+  if (!tkKey || !ft) return [];
+  const url = `${TANKERKOENIG}?lat=${lat.toFixed(4)}&lng=${lng.toFixed(4)}&rad=${rad}&sort=price&type=${ft}&apikey=${encodeURIComponent(tkKey)}`;
+  const j = await (await fetch(url)).json();
+  if (!j.ok) throw new Error(j.message || 'Tankerkönig-Fehler');
+  return (j.stations || []).filter(s => s.isOpen && typeof s.price === 'number' && s.price > 0);
+}
+function clearFuelStations() { fuelMarkers.forEach(m => m.remove()); fuelMarkers = []; fuelOnRoute = []; S.routeFuel = null; }
+function showFuelMarkers(list) {
+  fuelMarkers.forEach(m => m.remove()); fuelMarkers = [];
+  const best = list.length ? Math.min(...list.map(s => s.price)) : 0;
+  list.forEach(s => {
+    const el = document.createElement('div');
+    el.className = 'fuel-mk' + (s.price === best ? ' best' : s.price - best > 0.05 ? ' meh' : '');
+    el.textContent = fmtPrice(s.price);
+    el.addEventListener('click', ev => { ev.stopPropagation(); fuelPopup(s); });
+    fuelMarkers.push(new maplibregl.Marker({ element: el, anchor: 'bottom' }).setLngLat([s.lng, s.lat]).addTo(map));
+  });
+}
+function fuelPopup(s) {
+  const addr = [[s.street, s.houseNumber].filter(Boolean).join(' '), s.place].filter(Boolean).join(', ');
+  const div = document.createElement('div');
+  div.innerHTML = `<div class="font-bold">⛽ ${esc(fuelName(s))}</div><div class="text-xs text-slate-400">${esc(addr)}</div>
+    <div class="mt-1 font-game text-lg font-black text-lime-300">${fmtPrice(s.price)} € <span class="text-xs text-slate-400 font-sans font-normal">${esc(FUELS[vehicle.fuel] || '')}</span></div>
+    <div class="text-[10px] text-slate-500">Quelle: Tankerkönig (MTS-K)</div>`;
+  const pop = new maplibregl.Popup({ offset: 22 }).setLngLat([s.lng, s.lat]).setDOMContent(div).addTo(map);
+  if (S.mode === 'nav' || S.mode === 'free') return;
+  const b = document.createElement('button');
+  b.className = 'mt-2 w-full px-3 py-2 rounded-lg font-game font-bold text-black text-sm';
+  b.style.background = 'linear-gradient(90deg,#a3ff12,#5effc4)';
+  b.textContent = 'HIERHIN ▶';
+  b.onclick = () => { pop.remove(); setDestination({ name: `⛽ ${fuelName(s)}`, sub: addr, lat: s.lat, lng: s.lng }); };
+  div.appendChild(b);
+}
+// Stationen höchstens 700 m neben der Route, sortiert nach Preis
+function snapFuelTo(N, list) {
+  return list.map(s => { const sn = snapToRoute(N, s.lat, s.lng, true); return sn && sn.dist <= 700 ? Object.assign({}, s, { along: sn.along }) : null; })
+    .filter(Boolean).sort((a, b) => a.price - b.price);
+}
+async function routeFuel(N) {
+  S.routeFuel = null; fuelOnRoute = [];
+  if (!fuelType()) return;
+  if (!tkKey) { S.routeFuel = { hint: true }; renderRouteExtras(); return; }
+  try {
+    const km = N.total / 1000;
+    const pts = km <= 40 ? [[0.5, Math.min(25, Math.ceil(km / 2) + 3)]] : [[0.2, 15], [0.5, 15], [0.8, 15]];
+    const seen = new Map();
+    for (const [f, rad] of pts) {
+      const p = pointAlong(N, N.total * f);
+      (await tkStations(p.lat, p.lng, rad)).forEach(s => seen.set(s.id, s));
+    }
+    const on = snapFuelTo(N, [...seen.values()]);
+    if (S.mode !== 'preview' && S.mode !== 'nav') return;
+    if (!on.length) { S.routeFuel = { none: true }; renderRouteExtras(); return; }
+    const avg = on.reduce((a, s) => a + s.price, 0) / on.length;
+    S.routeFuel = { best: on[0], save: Math.round((avg - on[0].price) * 100), all: on };
+    fuelOnRoute = on;
+    showFuelMarkers(on.slice(0, 10));
+    renderRouteExtras();
+  } catch (e) { S.routeFuel = { err: e.message }; renderRouteExtras(); }
+}
+async function nearbyFuel() {
+  if (!S.pos) { toast('Kein Standort – GPS erlauben'); return; }
+  if (!tkKey) { toast('Bitte Tankerkönig-Schlüssel in der Garage eintragen'); openGarage(); return; }
+  toast('⛽ Suche günstige Tankstellen…');
+  try {
+    const list = (await tkStations(S.pos.lat, S.pos.lng, 5)).slice(0, 10);
+    if (!list.length) { toast('Keine geöffnete Tankstelle im Umkreis von 5 km'); return; }
+    showFuelMarkers(list);
+    const b = list[0];
+    toast(`⛽ Am günstigsten: ${fuelName(b)} · ${fmtPrice(b.price)} € · ${fmtDist((b.dist || 0) * 1000)}`);
+    if (S.follow) { S.follow = false; $('recenterBtn').classList.add('active-ring'); }
+    fitCoords(list.map(s => [s.lng, s.lat]).concat([[S.pos.lng, S.pos.lat]]));
+  } catch (e) { toast(`Tankstellen nicht geladen: ${e.message}`); }
+}
+// Während der Navigation einmal auf die günstigste Tankstelle voraus hinweisen
+function checkFuelAhead(N) {
+  if (fuelAnnounced || !fuelOnRoute.length) return;
+  const best = fuelOnRoute.find(s => s.along > N.along);
+  if (!best || best !== fuelOnRoute[0]) return;
+  const d = best.along - N.along;
+  if (d < 2500) {
+    fuelAnnounced = true;
+    speak(`In ${speechDist(d)} günstig tanken bei ${fuelName(best)}: ${Math.floor(best.price)} Euro ${Math.round(best.price % 1 * 100)}.`);
+    toast(`⛽ In ${fmtDist(d)}: ${fuelName(best)} ${fmtPrice(best.price)} €`);
+  }
+}
+
+// Zusatzinfos in der Routenvorschau: Wetter + Tankstelle
+function renderRouteExtras() {
+  const box = $('routeExtras'), rows = [], w = S.routeWx, f = S.routeFuel;
+  if (S.mode !== 'preview') { box.classList.add('hidden'); return; }
+  if (w) {
+    rows.push(`<div class="rounded-xl bg-black/30 border border-slate-700 px-3 py-2 text-sm">${wxLine(w.dest)}<span class="text-slate-400"> · am Ziel um ${timeStr(w.at)}</span></div>`);
+    if (w.warn) rows.push(`<div class="rounded-xl bg-amber-500/15 border border-amber-400/50 px-3 py-2 text-sm font-semibold text-amber-200">⚠️ ${esc(w.warn)} ${w.mid && wxWarn(w.mid) ? 'unterwegs' : 'am Ziel'}</div>`);
+  }
+  if (f && f.best) rows.push(`<button id="fuelBest" class="w-full text-left rounded-xl bg-lime-400/10 border border-lime-400/40 px-3 py-2 text-sm">⛽ Günstigste an der Route: <b>${esc(fuelName(f.best))}</b>
+      <b class="font-game text-lime-300">${fmtPrice(f.best.price)} €</b>${f.save >= 2 ? ` <span class="text-lime-200">(−${f.save} ct)</span>` : ''}<span class="text-slate-400"> · nach ${fmtDist(f.best.along)}</span></button>`);
+  else if (f && f.hint) rows.push('<div class="text-[11px] text-slate-500 px-1">⛽ Tipp: Tankerkönig-Schlüssel in der Garage eintragen, dann zeige ich günstige Tankstellen an der Route.</div>');
+  else if (f && f.none) rows.push('<div class="text-[11px] text-slate-500 px-1">⛽ Keine geöffnete Tankstelle direkt an der Route.</div>');
+  box.innerHTML = rows.join('');
+  box.classList.toggle('hidden', !rows.length);
+  if ($('fuelBest')) $('fuelBest').onclick = () => fuelPopup(f.best);
+  layout();
+}
+
+/* =================================================================
    GEFAHRENSTELLEN / BLITZER
    ================================================================= */
 let hazards = store.get(LS.haz, []);
@@ -1280,6 +1538,8 @@ function report(type) {
   tone(880, .1, 0, .6, 'triangle'); vibrate(80);
   toast(`${type === 'gefahr' ? '⚠️ Gefahr' : '📸 Blitzer'} gemeldet · +25 XP`);
   addXP(25);
+  bumpStat('reports');
+  checkAchievements();
 }
 
 /* ---------- Echte Blitzer aus OpenStreetMap (Overpass API) ---------- */
@@ -1288,15 +1548,18 @@ let osmEnabled = store.get(LS.osm, true);
 let osmArea = null, osmAreaAt = 0, osmLoading = false, osmCamsTimer = 0;
 (store.get(LS.cams, []) || []).forEach(a => osmCams.set(a[0], { id: 'osm-' + a[0], type: 'osm', lat: a[1], lng: a[2], maxspeed: a[3] || null }));
 
-async function overpass(query) {
+// Overpass-Server sind oft überlastet: nacheinander probieren (zuletzt erfolgreicher zuerst), jeder mit Zeitlimit
+let overpassFirst = 0;
+async function overpass(query, ms = 25000) {
   let lastErr;
-  for (const url of OVERPASS) {
+  for (let k = 0; k < OVERPASS.length; k++) {
+    const i = (overpassFirst + k) % OVERPASS.length, ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), ms);
     try {
-      const r = await fetch(url, { method: 'POST', body: 'data=' + encodeURIComponent(query),
+      const r = await fetch(OVERPASS[i], { method: 'POST', body: 'data=' + encodeURIComponent(query), signal: ctl.signal,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-      if (r.ok) return await r.json();
+      if (r.ok) { const j = await r.json(); overpassFirst = i; return j; }
       lastErr = new Error('HTTP ' + r.status);
-    } catch (e) { lastErr = e; }
+    } catch (e) { lastErr = e; } finally { clearTimeout(timer); }
   }
   throw lastErr || new Error('Overpass nicht erreichbar');
 }
@@ -1405,6 +1668,104 @@ function hideAlarm() {
 }
 
 /* =================================================================
+   TEMPOLIMIT (OpenStreetMap „maxspeed“)
+   ================================================================= */
+const limitWays = new Map();   // OSM-Way-ID → { lim: {v}|{none}, pts: [[lng,lat]…], b: [minLng,minLat,maxLng,maxLat] }
+let limitArea = null, limitAreaAt = 0, limitLoading = false;
+let limitCand = null, limitCandN = 0, limitMiss = 0, limitOverAt = 0, limitLastT = 0;
+const LIMIT_ROADS = 'motorway|trunk|primary|secondary|tertiary|unclassified|residential|living_street|service|road|motorway_link|trunk_link|primary_link|secondary_link|tertiary_link';
+
+function parseMaxspeed(s) {
+  s = String(s || '').trim().toLowerCase();
+  if (!s) return null;
+  if (s === 'none' || s === 'de:motorway') return { none: true };
+  if (s === 'walk' || /:(walk|living_street)$/.test(s)) return { v: 7 };
+  if (/:urban$/.test(s)) return { v: 50 };
+  if (/:rural$/.test(s)) return { v: 100 };
+  if (/:(zone30|zone:30|bicycle_road)$/.test(s)) return { v: 30 };
+  if (/:zone20$|:zone:20$/.test(s)) return { v: 20 };
+  const m = s.match(/^(\d+)\s*(mph)?/);
+  return m ? { v: m[2] ? Math.round(+m[1] * 1.609) : +m[1] } : null; // „signals“, „variable“ → unbekannt
+}
+function mergeLimits(j) {
+  if (limitWays.size > 8000) limitWays.clear();
+  for (const e of (j && j.elements) || []) {
+    if (e.type !== 'way' || !e.geometry || e.geometry.length < 2) continue;
+    const lim = parseMaxspeed(e.tags && e.tags.maxspeed);
+    if (!lim) continue;
+    const pts = e.geometry.map(g => [g.lon, g.lat]);
+    const b = pts.reduce((a, p) => [Math.min(a[0], p[0]), Math.min(a[1], p[1]), Math.max(a[2], p[0]), Math.max(a[3], p[1])], [180, 90, -180, -90]);
+    limitWays.set(e.id, { lim, pts, b });
+  }
+}
+async function loadLimitsArea(lat, lng) {
+  if (limitLoading) return;
+  limitLoading = true; limitArea = { lat, lng }; limitAreaAt = Date.now();
+  try {
+    mergeLimits(await overpass(`[out:json][timeout:20];way(around:1000,${lat.toFixed(5)},${lng.toFixed(5)})[highway~"^(${LIMIT_ROADS})$"][maxspeed];out tags geom;`, 15000));
+  } catch (e) { limitAreaAt = Date.now() - 30000; } finally { limitLoading = false; }
+}
+// Entlang der Route: Overpass „around“ mit Polylinie, Stützpunkte alle ≥ 200 m
+async function loadLimitsAlongRoute(N) {
+  const step = Math.max(200, N.total / 1500), pts = [];
+  for (let s = 0; s <= N.total; s += step) { const p = pointAlong(N, s); pts.push(`${p.lat.toFixed(5)},${p.lng.toFixed(5)}`); }
+  try { mergeLimits(await overpass(`[out:json][timeout:40];way(around:25,${pts.join(',')})[highway~"^(${LIMIT_ROADS})$"][maxspeed];out tags geom;`, 45000)); } catch (e) {}
+}
+function limitAt(lat, lng, hdg) {
+  const kx = 111320 * Math.cos(lat * toR), ky = 110540, padLat = 0.0003, padLng = 0.0005;
+  let best = null, bestScore = Infinity;
+  for (const w of limitWays.values()) {
+    if (lat < w.b[1] - padLat || lat > w.b[3] + padLat || lng < w.b[0] - padLng || lng > w.b[2] + padLng) continue;
+    for (let i = 0; i < w.pts.length - 1; i++) {
+      const a = w.pts[i], c = w.pts[i + 1];
+      const ax = (a[0] - lng) * kx, ay = (a[1] - lat) * ky, bx = (c[0] - lng) * kx, by = (c[1] - lat) * ky;
+      const dx = bx - ax, dy = by - ay, L2 = dx * dx + dy * dy;
+      const t = L2 ? clamp(-(ax * dx + ay * dy) / L2, 0, 1) : 0;
+      const d = Math.hypot(ax + t * dx, ay + t * dy);
+      if (d > 25) continue;
+      // Straßen quer zur Fahrtrichtung (Kreuzungen) abwerten
+      let diff = Math.abs(((bearingTo(a[1], a[0], c[1], c[0]) - hdg) % 180 + 180) % 180);
+      diff = Math.min(diff, 180 - diff);
+      const score = d + (diff > 40 ? 20 : 0);
+      if (score < bestScore) { bestScore = score; best = w.lim; }
+    }
+  }
+  return best;
+}
+function updateLimit(f, kmh, hdg) {
+  const driving = S.mode === 'nav' || S.mode === 'free';
+  const dt = limitLastT ? clamp((f.t - limitLastT) / 1000, 0, 5) : 0;
+  limitLastT = f.t;
+  if (!driving) { if (S.limit) { S.limit = null; renderLimit(false); } return; }
+  if (!limitArea || (haversine(limitArea.lat, limitArea.lng, f.lat, f.lng) > 700 && Date.now() - limitAreaAt > 45000)) loadLimitsArea(f.lat, f.lng);
+  const lim = limitAt(f.lat, f.lng, hdg);
+  // Wechsel erst nach zwei gleichen Treffern (kein Flackern an Kreuzungen); nach 4 Fehlschlägen ausblenden
+  if (lim) {
+    limitMiss = 0;
+    const same = c => c && (c.none ? lim.none : c.v === lim.v);
+    if (same(S.limit)) limitCandN = 0;
+    else if (same(limitCand)) { if (++limitCandN >= 2) { S.limit = lim; limitCand = null; limitCandN = 0; } }
+    else { limitCand = lim; limitCandN = 1; if (!S.limit) S.limit = lim; }
+  } else if (++limitMiss >= 4) S.limit = null;
+  const v = S.limit && S.limit.v, tol = v ? (v <= 100 ? 5 : Math.round(v * 0.05)) : 0;
+  const over = !!(v && kmh > v + tol);
+  if (S.trip && S.limit) { S.trip.limSec = (S.trip.limSec || 0) + dt; if (over) S.trip.overSec = (S.trip.overSec || 0) + dt; }
+  if (over && Date.now() - limitOverAt > 30000) { limitOverAt = Date.now(); tone(880, .12, 0, .5, 'triangle'); tone(660, .18, .14, .5, 'triangle'); vibrate([60, 40, 60]); }
+  if (!over) limitOverAt = Math.min(limitOverAt, Date.now() - 20000); // nach Abbremsen bald wieder warnen
+  renderLimit(over);
+}
+function renderLimit(over) {
+  const el = $('limitSign'), L = S.limit;
+  el.classList.toggle('hidden', !L);
+  $('gauge').classList.toggle('over', !!over);
+  if (!L) return;
+  el.classList.toggle('over', !!over);
+  el.textContent = L.none ? '∞' : L.v;
+  el.style.borderColor = L.none ? '#64748b' : '';
+  el.style.fontSize = !L.none && L.v >= 100 ? '14px' : '';
+}
+
+/* =================================================================
    GPS
    ================================================================= */
 let watchId = null;
@@ -1452,6 +1813,9 @@ function onFix(f) {
   }
   checkHazards();
   maybeLoadCamsArea();
+  updateWxNow();
+  updateLimit(f, kmh, hdg);
+  ghostTick();
   renderGauge();
   renderFreeStats();
   camera();
@@ -1461,13 +1825,14 @@ function onFix(f) {
    FAHRT AUFZEICHNEN
    ================================================================= */
 function startTrip(label) {
-  S.trip = { start: Date.now(), label, coords: [], distance: 0, max: 0, xpAcc: 0 };
-  if (S.pos) S.trip.coords.push([r5(S.pos.lng), r5(S.pos.lat)]);
+  // tl: Zeitverlauf [ms seit Start, gefahrene Meter] – Grundlage fürs Ghost-Rennen
+  S.trip = { start: Date.now(), label, coords: [], tl: [], distance: 0, max: 0, xpAcc: 0, overSec: 0 };
+  if (S.pos) { S.trip.coords.push([r5(S.pos.lng), r5(S.pos.lat)]); S.trip.tl.push([0, 0]); }
   setSrc('trail', emptyFC());
 }
 function recordTrip(f, kmh) {
   const T = S.trip, good = f.acc == null || f.acc <= 35, last = T.coords[T.coords.length - 1];
-  if (!last) { if (good) T.coords.push([r5(f.lng), r5(f.lat)]); }
+  if (!last) { if (good) { T.coords.push([r5(f.lng), r5(f.lat)]); T.tl.push([Date.now() - T.start, 0]); } }
   else {
     const d = haversine(last[1], last[0], f.lat, f.lng);
     const maxJump = S.bridgeGap ? 300000 : 2000;
@@ -1475,6 +1840,7 @@ function recordTrip(f, kmh) {
       S.bridgeGap = false;
       T.coords.push([r5(f.lng), r5(f.lat)]);
       T.distance += d;
+      T.tl.push([Date.now() - T.start, Math.round(T.distance)]);
       T.xpAcc += d;
       if (T.xpAcc >= 100) { const n = Math.floor(T.xpAcc / 100); T.xpAcc -= n * 100; addXP(n); }
     }
@@ -1492,12 +1858,81 @@ function finishTrip() {
   const dur = Date.now() - T.start;
   const trip = { id: 't' + Date.now().toString(36), date: new Date(T.start).toISOString(), label: T.label, duration: dur,
                  distance: Math.round(T.distance), avg: dur > 0 ? (T.distance / 1000) / (dur / 3600000) : 0, max: T.max, coords };
-  const c = costFor(trip.distance, trip.avg);
-  trip.cost = c.eur; trip.costExtra = c.extra; trip.vehicle = vehicleLabel();
+  const tv = tripVehicle(), c = costFor(trip.distance, trip.avg, tv);
+  trip.cost = c.eur; trip.costExtra = c.extra; trip.co2 = Math.round(c.co2 * 100) / 100;
+  trip.vehicle = vehicleLabel(tv); trip.kind = tv.kind; trip.over = Math.round(T.overSec || 0); trip.lim = Math.round(T.limSec || 0);
   let trips = store.get(LS.trips, []);
   trips.unshift(trip);
   while (!store.set(LS.trips, trips) && trips.length > 1) trips.pop();
+  S.lastTripRaw = T;
+  addExplored(trip.coords);
   return trip;
+}
+
+/* =================================================================
+   GHOST-RENNEN – gegen die eigene Bestzeit (gleicher Start ±500 m, gleiches Ziel ±150 m)
+   ================================================================= */
+let ghostMarker = null;
+const fmtSec = ms => { const s = Math.round(Math.abs(ms) / 1000); return s < 60 ? `${s} s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} min`; };
+const ghostMatch = (g, fromLat, fromLng, to) => haversine(g.to[0], g.to[1], to.lat, to.lng) < 150 && haversine(g.from[0], g.from[1], fromLat, fromLng) < 500;
+
+function ghostStart(dest, N) {
+  ghostStop();
+  if (!dest || dest.walk || !S.pos) return;
+  const g = store.get(LS.ghosts, []).find(x => ghostMatch(x, S.pos.lat, S.pos.lng, dest));
+  if (!g) return;
+  S.ghost = g;
+  const el = document.createElement('div');
+  el.className = 'ghost-mk'; el.textContent = '👻';
+  ghostMarker = new maplibregl.Marker({ element: el }).setLngLat([g.pts[0][0], g.pts[0][1]]).addTo(map);
+  $('ghostLine').textContent = `👻 Dein Geist fährt mit · Bestzeit ${fmtSec(g.dur)}`;
+  $('ghostLine').className = 'mb-2 text-sm font-bold px-1 text-violet-300';
+}
+function ghostStop() {
+  if (ghostMarker) { ghostMarker.remove(); ghostMarker = null; }
+  S.ghost = null;
+  $('ghostLine').classList.add('hidden');
+}
+// Interpolation in den Geist-Punkten [lng, lat, Meter, ms] nach Zeit (k = 3) oder Strecke (k = 2)
+function ghostInterp(pts, k, v) {
+  if (v <= pts[0][k]) return pts[0];
+  const last = pts[pts.length - 1];
+  if (v >= last[k]) return last;
+  let lo = 0, hi = pts.length - 1;
+  while (lo < hi - 1) { const mid = (lo + hi) >> 1; if (pts[mid][k] <= v) lo = mid; else hi = mid; }
+  const a = pts[lo], b = pts[hi], f = b[k] > a[k] ? (v - a[k]) / (b[k] - a[k]) : 0;
+  return a.map((x, i) => x + (b[i] - x) * f);
+}
+function ghostTick() {
+  const g = S.ghost, T = S.trip;
+  if (!g || !T || S.mode !== 'nav') return;
+  const el = Date.now() - T.start, gp = ghostInterp(g.pts, 3, el);
+  if (ghostMarker) ghostMarker.setLngLat([gp[0], gp[1]]);
+  // Wie lange hat der Geist für meine bisherige Strecke gebraucht?
+  const diff = el - ghostInterp(g.pts, 2, T.distance)[3];
+  const line = $('ghostLine');
+  if (T.distance < 200) return;
+  line.textContent = diff < -3000 ? `👻 ${fmtSec(diff)} schneller als dein Geist` : diff > 3000 ? `👻 ${fmtSec(diff)} hinter deinem Geist` : '👻 Kopf an Kopf mit deinem Geist!';
+  line.className = `mb-2 text-sm font-bold px-1 ${diff < -3000 ? 'text-lime-300' : diff > 3000 ? 'text-pink-300' : 'text-violet-300'}`;
+}
+// Nach Ankunft: Bestzeit speichern bzw. vergleichen. Gibt einen Zusatz für die Ankunftsmeldung zurück.
+function ghostFinish(dest, trip) {
+  const T = S.lastTripRaw;
+  if (!T || !T.tl || T.tl.length < 2 || T.tl.length !== T.coords.length) return '';
+  const list = store.get(LS.ghosts, []), from = T.coords[0];
+  const idx = list.findIndex(g => ghostMatch(g, from[1], from[0], dest)), old = idx >= 0 ? list[idx] : null;
+  const fair = (trip.over || 0) <= 10; // höchstens 10 s über dem Tempolimit
+  if (!fair) return ' · 👻 Bestzeit zählt nur ohne Tempoverstöße';
+  if (old && trip.duration >= old.dur) return ` · 👻 ${fmtSec(trip.duration - old.dur)} langsamer als dein Geist`;
+  let pts = T.coords.map((c, i) => [c[0], c[1], T.tl[i][1], T.tl[i][0]]);
+  if (pts.length > 600) { const k = Math.ceil(pts.length / 600); pts = pts.filter((p, i) => i % k === 0 || i === pts.length - 1); }
+  const g = { from: [from[1], from[0]], to: [dest.lat, dest.lng], name: dest.name, dur: trip.duration, date: trip.date, pts };
+  let msg;
+  if (old) { list[idx] = g; bumpStat('ghostWins'); msg = ` · 👻 NEUE BESTZEIT, ${fmtSec(old.dur - trip.duration)} schneller!`; }
+  else { list.unshift(g); msg = ' · 👻 Geist gespeichert – nächstes Mal fährt er mit'; }
+  let keep = list.slice(0, 15);
+  while (!store.set(LS.ghosts, keep) && keep.length > 1) keep.pop();
+  return msg;
 }
 
 /* =================================================================
@@ -1505,7 +1940,7 @@ function finishTrip() {
    ================================================================= */
 async function fetchRoutes(from, to) {
   let lastErr;
-  for (const base of ROUTERS[profileOf(vehicle)]) {
+  for (const base of ROUTERS[to.walk ? 'foot' : profileOf(vehicle)]) {
     try {
       const url = `${base}${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true&alternatives=true`;
       const r = await fetch(url);
@@ -1604,6 +2039,7 @@ function updateNav(f) {
   renderNavStats(N, remain);
   if (mapReady && map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-gradient', routeGradient(N.along / N.total));
   voiceLogic(N, ni, d);
+  checkFuelAhead(N);
   return sn;
 }
 
@@ -1697,11 +2133,12 @@ function renderNavStats(N, remain) {
 function renderCostLine(avgPlan, totalPlan) {
   const T = S.trip;
   if (!T) { $('costLine').textContent = ''; return; }
+  const tv = tripVehicle();
   const el = Date.now() - T.start, avg = el > 60000 ? (T.distance / 1000) / (el / 3600000) : avgPlan;
-  const now = costFor(T.distance, avg);
-  const left = isFree(vehicle) ? `${kindInfo(vehicle.kind).icon} bisher ${now.extra}` : `💶 bisher <b class="text-lime-300 font-game">${now.text}</b>`;
-  let right = `<span class="truncate">${esc(vehicleLabel())}</span>`;
-  if (totalPlan && !isFree(vehicle)) right = `Ziel ≈ <b class="font-game text-white">${costFor(totalPlan, avgPlan).text}</b>`;
+  const now = costFor(T.distance, avg, tv);
+  const left = isFree(tv) ? `${kindInfo(tv.kind).icon} bisher ${now.extra}` : `💶 bisher <b class="text-lime-300 font-game">${now.text}</b>`;
+  let right = `<span class="truncate">${esc(vehicleLabel(tv))}</span>`;
+  if (totalPlan && !isFree(tv)) right = `Ziel ≈ <b class="font-game text-white">${costFor(totalPlan, avgPlan, tv).text}</b>`;
   $('costLine').innerHTML = `<span>${left}</span><span class="text-right">${right}</span>`;
 }
 function updateNextHazard() {
@@ -1736,6 +2173,8 @@ async function reroute() {
     S.nav = prepareNav(routes[0]);
     setRouteOnMap(S.nav);
     loadCamsAlongRoutes([S.nav]);
+    loadLimitsAlongRoute(S.nav);
+    if (fuelOnRoute.length) fuelOnRoute = snapFuelTo(S.nav, fuelOnRoute);
     toast('🔄 Neue Route');
   } catch (e) {
     toast('Neuberechnung fehlgeschlagen');
@@ -1764,13 +2203,16 @@ async function setDestination(place) {
   if (S.mode === 'nav' || S.mode === 'free') { toast('Erst die aktuelle Fahrt beenden'); return; }
   if (S.viewTrip) closeTripView();
   S.dest = place;
-  saveRecent(place);
+  if (!place.walk) saveRecent(place);
   setDestMarker(place);
+  renderFavBtn();
   $('destName').textContent = place.name;
   $('destSub').textContent = place.sub || '';
   $('routeCards').innerHTML = '<div class="text-center text-slate-400 py-4 font-game text-sm blink">BERECHNE ROUTE…</div>';
   $('goBtn').disabled = true;
+  clearFuelStations(); S.routeWx = null;
   setMode('preview');
+  renderRouteExtras();
   if (!S.pos) {
     $('routeCards').innerHTML = '<div class="text-center text-amber-300 py-3 text-sm">Kein Standort – bitte GPS erlauben, dann erneut wählen.</div>';
     map.easeTo({ center: [place.lng, place.lat], zoom: 14, padding: pad() });
@@ -1783,6 +2225,8 @@ async function setDestination(place) {
     S.routeIdx = 0;
     $('goBtn').disabled = false;
     drawPreview(true);
+    routeWeather(S.routes[0]);
+    if (!place.walk) routeFuel(S.routes[0]);
     const navs = S.routes;
     loadCamsAlongRoutes(navs).then(() => { if (S.mode === 'preview' && S.routes === navs) { navs.forEach(computeRouteHazards); drawPreview(false); } });
   } catch (e) {
@@ -1799,7 +2243,7 @@ function drawPreview(fit) {
     { type: 'Feature', properties: { idx: i }, geometry: { type: 'LineString', coordinates: r.coords } }).filter(Boolean) });
 
   $('routeCards').innerHTML = S.routes.map((r, i) => {
-    const on = i === S.routeIdx, hz = r.routeHaz.length, c = costFor(r.total, (r.total / 1000) / (r.duration / 3600));
+    const on = i === S.routeIdx, hz = r.routeHaz.length, c = costFor(r.total, (r.total / 1000) / (r.duration / 3600), tripVehicle());
     return `<button data-idx="${i}" class="route-card w-full text-left rounded-2xl p-3 border ${on ? 'border-cyan-300 bg-cyan-400/10' : 'border-slate-700 bg-black/30'}">
       <div class="flex justify-between items-baseline gap-2">
         <span class="font-game text-2xl font-black ${on ? 'neon-text' : 'text-slate-200'}">${fmtDur(r.duration)}</span>
@@ -1817,7 +2261,8 @@ function drawPreview(fit) {
 function selectRoute(i) { if (i === S.routeIdx || !S.routes[i]) return; S.routeIdx = i; drawPreview(false); }
 
 function cancelPreview() {
-  S.dest = null; S.routes = [];
+  S.dest = null; S.routes = []; S.routeWx = null;
+  clearFuelStations();
   setDestMarker(null);
   setSrc('route', emptyFC()); setSrc('alts', emptyFC());
   setMode('browse');
@@ -1841,7 +2286,13 @@ function startNav() {
   setMode('nav');
   requestWakeLock();
   $('manIcon').innerHTML = iconFor(N.steps[Math.min(1, N.steps.length - 1)]);
-  speak(`Los geht's. Ankunft in etwa ${fmtDur(N.duration).replace('h', 'Stunden').replace('min', 'Minuten')}.`);
+  fuelAnnounced = false;
+  if (fuelOnRoute.length && N !== S.routes[0]) { fuelOnRoute = snapFuelTo(N, fuelOnRoute); showFuelMarkers(fuelOnRoute.slice(0, 10)); }
+  if (S.trip && S.dest && S.dest.walk) S.trip.walk = true;
+  ghostStart(S.dest, N);
+  loadLimitsAlongRoute(N);
+  const wx = S.routeWx && S.routeWx.warn ? ` Achtung, ${S.routeWx.warn} ${S.routeWx.mid && wxWarn(S.routeWx.mid) ? 'unterwegs' : 'am Ziel'}.` : '';
+  speak(`Los geht's. Ankunft in etwa ${fmtDur(N.duration).replace('h', 'Stunden').replace('min', 'Minuten')}.${wx}${S.ghost ? ' Dein Geist fährt mit – schlag deine Bestzeit, aber fair!' : ''}`);
   if (S.pos) { updateNav(S.pos); camera(); }
 }
 
@@ -1866,21 +2317,28 @@ function startFree() {
 }
 
 function endDrive(reason) {
-  const wasNav = S.mode === 'nav';
+  const wasNav = S.mode === 'nav', dest = S.dest, walk = !!(dest && dest.walk);
   const trip = finishTrip();
+  const ghostMsg = reason === 'arrived' && trip && dest && !walk ? ghostFinish(dest, trip) : '';
+  ghostStop();
   S.nav = null; S.dest = null; S.routes = [];
   setDestMarker(null);
   setSrc('route', emptyFC()); setSrc('alts', emptyFC());
+  clearFuelStations();
   hideAlarm();
   releaseWakeLock();
   setMode('browse');
   S.follow = true; S.camZoom = null;
   camera();
+  if (walk && reason === 'arrived') clearParking();
+  else if (trip && !walk) saveParking();
+  if (reason === 'arrived') bumpStat('arrivals');
   if (reason === 'arrived') {
     addXP(50);
-    toast(`🏁 Ziel erreicht! +50 XP${trip ? ` · ${(trip.distance / 1000).toFixed(1).replace('.', ',')} km · ${fmtEur(trip.cost)}` : ''}`);
+    toast(walk ? `🅿️ Fahrzeug gefunden! +50 XP` : `🏁 Ziel erreicht! +50 XP${trip ? ` · ${(trip.distance / 1000).toFixed(1).replace('.', ',')} km · ${fmtEur(trip.cost)}` : ''}${ghostMsg}`);
   } else if (trip) toast(`Fahrt gespeichert · ${(trip.distance / 1000).toFixed(1).replace('.', ',')} km · ${fmtEur(trip.cost)}`);
   else if (wasNav || reason === 'manual') toast('Fahrt beendet');
+  checkAchievements(trip);
 }
 function arrived() {
   speak('Sie haben Ihr Ziel erreicht.');
@@ -1912,14 +2370,16 @@ function renderPlaceList(list, icon, emptyText) {
   list.forEach(p => {
     const b = document.createElement('button');
     b.className = 'w-full text-left rounded-2xl bg-slate-900/80 border border-slate-800 p-3 active:scale-[.98] transition';
-    b.innerHTML = placeRow(p, icon);
+    b.innerHTML = placeRow(p, p.icon || icon);
     b.onclick = () => setDestination(p);
     box.appendChild(b);
   });
 }
 function renderRecentsList() {
-  const rec = store.get(LS.recents, []);
-  renderPlaceList(rec, '🕘', 'Tippe ein Ziel ein.<br><span class="text-xs">Tipp: Lange auf die Karte drücken setzt ein Ziel.</span>');
+  // Favoriten zuerst, danach die letzten Ziele (ohne Doppelte)
+  const fv = favs.map(f => ({ name: f.type === 'fav' ? f.name : FAV_LABEL[f.type], sub: f.type === 'fav' ? f.sub : f.name, lat: f.lat, lng: f.lng, icon: FAV_ICON[f.type] }));
+  const rec = store.get(LS.recents, []).filter(r => !favAt(r));
+  renderPlaceList(fv.concat(rec), '🕘', 'Tippe ein Ziel ein.<br><span class="text-xs">Tipp: Lange auf die Karte drücken setzt ein Ziel.</span>');
 }
 async function doSearch(q) {
   const seq = ++searchSeq;
@@ -1958,6 +2418,109 @@ function renderRecentChips() {
     b.onclick = () => setDestination(p);
     box.appendChild(b);
   });
+}
+
+/* =================================================================
+   FAVORITEN & PARKPLATZ
+   ================================================================= */
+const FAV_ICON = { home: '🏠', work: '💼', fav: '⭐' };
+const FAV_LABEL = { home: 'Zuhause', work: 'Arbeit' };
+let favs = store.get(LS.favs, []);
+let park = store.get(LS.park, null), parkMarker = null;
+const favAt = p => favs.find(f => haversine(f.lat, f.lng, p.lat, p.lng) < 40);
+// Bei Fußwegen zum geparkten Fahrzeug wird mit „Zu Fuß“ geroutet und gerechnet
+const tripVehicle = () => (S.dest && S.dest.walk) ? { kind: 'foot' } : vehicle;
+
+function saveFav(place, type) {
+  // Zuhause/Arbeit gibt es nur einmal; ein Favorit am selben Ort wird ersetzt
+  favs = favs.filter(f => !(type !== 'fav' && f.type === type) && haversine(f.lat, f.lng, place.lat, place.lng) >= 40);
+  favs.push({ id: 'f' + Date.now().toString(36), type, name: place.name, sub: place.sub || '', lat: place.lat, lng: place.lng });
+  store.set(LS.favs, favs);
+  renderFavChips(); renderFavBtn();
+  toast(`${FAV_ICON[type]} ${type === 'fav' ? place.name : FAV_LABEL[type]} gespeichert`);
+  checkAchievements();
+}
+function removeFav(id) {
+  favs = favs.filter(f => f.id !== id); store.set(LS.favs, favs);
+  renderFavChips(); renderFavBtn(); toast('Favorit entfernt');
+}
+let favTarget = null;
+function openFavModal(place) {
+  favTarget = place;
+  const cur = favAt(place);
+  $('favName').textContent = place.name;
+  $('favRemove').classList.toggle('hidden', !cur);
+  document.querySelectorAll('.fav-opt').forEach(b => b.classList.toggle('!border-cyan-300', !!cur && cur.type === b.dataset.ft));
+  $('favModal').classList.remove('hidden');
+}
+function closeFavModal() { $('favModal').classList.add('hidden'); favTarget = null; }
+function renderFavBtn() {
+  const f = S.dest && favAt(S.dest);
+  $('favBtn').textContent = f ? FAV_ICON[f.type] : '☆';
+  $('favBtn').classList.toggle('hidden', !!(S.dest && S.dest.walk));
+}
+function goFav(f) {
+  setDestination(f.type === 'fav' ? { name: f.name, sub: f.sub, lat: f.lat, lng: f.lng } : { name: FAV_LABEL[f.type], sub: f.name, lat: f.lat, lng: f.lng });
+}
+// Langes Drücken auf einen Chip (z. B. zum Entfernen) – der normale Tipp wird dann unterdrückt
+function onHold(el, fn) {
+  let t = null;
+  el.addEventListener('pointerdown', () => { t = setTimeout(() => { t = null; el.dataset.held = '1'; vibrate(30); fn(); }, 600); });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => el.addEventListener(ev, () => clearTimeout(t)));
+  el.addEventListener('click', e => { if (el.dataset.held) { delete el.dataset.held; e.stopImmediatePropagation(); e.preventDefault(); } }, true);
+}
+function renderFavChips() {
+  const box = $('favChips');
+  box.innerHTML = '';
+  const chip = (html, cls, fn, hold) => {
+    const b = document.createElement('button');
+    b.className = 'shrink-0 h-10 px-3 rounded-xl text-sm font-semibold max-w-[200px] truncate ' + cls;
+    b.innerHTML = html; b.onclick = fn;
+    if (hold) onHold(b, hold);
+    box.appendChild(b);
+  };
+  if (park) chip(`🅿️ Zum ${esc(kindInfo(park.kind).label)}${S.pos ? ` · ${fmtDist(haversine(S.pos.lat, S.pos.lng, park.lat, park.lng))}` : ''}`,
+    'bg-blue-500/20 border border-blue-400/50 text-blue-100', goToCar, () => { if (confirm('Parkplatz vergessen?')) clearParking(); });
+  for (const t of ['home', 'work']) {
+    const f = favs.find(x => x.type === t);
+    if (f) chip(`${FAV_ICON[t]} ${FAV_LABEL[t]}`, 'bg-cyan-400/10 border border-cyan-400/40', () => goFav(f), () => { if (confirm(`${FAV_LABEL[t]} entfernen?`)) removeFav(f.id); });
+    else chip(`${FAV_ICON[t]} ${FAV_LABEL[t]} +`, 'bg-slate-800/50 border border-dashed border-slate-600 text-slate-400',
+      () => { openSearch(); toast(`${FAV_LABEL[t]} festlegen: Ort suchen, dann ☆ antippen`); });
+  }
+  favs.filter(f => f.type === 'fav').forEach(f => chip(`⭐ ${esc(f.name)}`, 'bg-amber-400/10 border border-amber-300/40', () => goFav(f),
+    () => { if (confirm(`„${f.name}“ aus den Favoriten entfernen?`)) removeFav(f.id); }));
+  if (fuelType()) chip('⛽ Günstig tanken', 'bg-lime-400/10 border border-lime-400/40 text-lime-100', nearbyFuel);
+}
+
+function renderPark() {
+  if (parkMarker) { parkMarker.remove(); parkMarker = null; }
+  if (park) {
+    const el = document.createElement('div');
+    el.className = 'park-mk'; el.textContent = 'P';
+    el.addEventListener('click', ev => { ev.stopPropagation(); parkPopup(); });
+    parkMarker = new maplibregl.Marker({ element: el }).setLngLat([park.lng, park.lat]).addTo(map);
+  }
+  renderFavChips();
+}
+const agoStr = t => { const m = Math.round((Date.now() - t) / 60000); return m < 60 ? `vor ${m} min` : m < 1440 ? `vor ${Math.round(m / 60)} h` : `am ${new Date(t).toLocaleDateString('de-DE')}`; };
+function parkPopup() {
+  const div = document.createElement('div');
+  div.innerHTML = `<div class="font-bold">🅿️ Dein ${esc(kindInfo(park.kind).label)}</div><div class="text-xs text-slate-400">Geparkt ${agoStr(park.t)} · ${timeStr(new Date(park.t))} Uhr</div>
+    <div class="mt-2 grid grid-cols-2 gap-1.5"><button class="pk-go poi-btn">🚶 Hinlaufen</button><button class="pk-del poi-btn">🗑 Vergessen</button></div>`;
+  const pop = new maplibregl.Popup({ offset: 18 }).setLngLat([park.lng, park.lat]).setDOMContent(div).addTo(map);
+  div.querySelector('.pk-go').onclick = () => { pop.remove(); goToCar(); };
+  div.querySelector('.pk-del').onclick = () => { pop.remove(); clearParking(); toast('Parkplatz vergessen'); };
+}
+function saveParking() {
+  if (!S.pos || vehicle.kind === 'foot' || Date.now() - S.lastFixAt > 120000) return;
+  park = { lat: r5(S.pos.lat), lng: r5(S.pos.lng), t: Date.now(), kind: vehicle.kind };
+  store.set(LS.park, park);
+  renderPark();
+}
+function clearParking() { park = null; store.set(LS.park, null); renderPark(); }
+function goToCar() {
+  if (!park) return;
+  setDestination({ name: `Dein ${kindInfo(park.kind).label}`, sub: `Geparkt ${agoStr(park.t)}`, lat: park.lat, lng: park.lng, walk: true });
 }
 
 /* Langes Drücken auf die Karte = Ziel setzen */
@@ -2080,6 +2643,11 @@ async function aiSystemPrompt() {
     `${S.pos ? 'Standort' : 'Kartenmitte (kein GPS)'}: ${area || 'unbekannt'} (${p.lat.toFixed(5)}, ${p.lng.toFixed(5)})`,
     `Fahrzeug: ${vehicleLabel()}${!isFree(vehicle) && vehicle.fuel && prices[vehicle.fuel === 'electric' ? 'kwh' : vehicle.fuel] ? ` · Preis ${fmtDec(prices[vehicle.fuel === 'electric' ? 'kwh' : vehicle.fuel])} €/${vehicle.fuel === 'electric' ? 'kWh' : 'L'}` : ''}`
   ];
+  if (S.wxNow) ctx.push(`Wetter jetzt: ${S.wxNow.text}, ${Math.round(S.wxNow.temp)} °C${S.wxNow.warn ? ` (Warnung: ${S.wxNow.warn})` : ''}`);
+  if (S.routeWx && (S.mode === 'nav' || S.mode === 'preview')) ctx.push(`Wetter am Ziel bei Ankunft: ${wxDesc(S.routeWx.dest.code, S.routeWx.dest.day)[1]}, ${Math.round(S.routeWx.dest.temp)} °C, Regenrisiko ${S.routeWx.dest.pp} %${S.routeWx.warn ? ` – Warnung: ${S.routeWx.warn}` : ''}`);
+  if (S.limit) ctx.push(`Tempolimit hier: ${S.limit.none ? 'keins (Richtgeschwindigkeit 130)' : S.limit.v + ' km/h'}`);
+  if (S.routeFuel && S.routeFuel.best) ctx.push(`Günstigste Tankstelle an der Route: ${fuelName(S.routeFuel.best)} für ${fmtPrice(S.routeFuel.best.price)} €`);
+  if (park) ctx.push(`Geparktes Fahrzeug: ${fmtDist(haversine(p.lat, p.lng, park.lat, park.lng))} entfernt, geparkt ${agoStr(park.t)}`);
   if (S.mode === 'nav' && S.nav) {
     const remain = Math.max(0, S.nav.total - (S.nav.along || 0)), sec = S.nav.duration * (remain / S.nav.total);
     const pts = [0.25, 0.5, 0.75].map(f => S.nav.coords[Math.floor((S.nav.coords.length - 1) * f)]).map(c => `${c[1].toFixed(4)}, ${c[0].toFixed(4)}`);
@@ -2206,6 +2774,49 @@ function aiRenderChips() {
   $('aiChips').innerHTML = chips.map(c => `<button type="button" class="ai-chip">${esc(c)}</button>`).join('');
   $('aiChips').querySelectorAll('button').forEach(b => b.onclick = () => aiAsk(b.textContent.replace(/^\S+\s/, '')));
 }
+/* --- Spracheingabe: nativ in der iOS-App, sonst Web Speech API (Safari/Chrome) --- */
+const WebSR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const nativeSpeech = !!window.__nnNativeSpeech;
+const canListen = nativeSpeech || !!WebSR;
+let listening = false, webRec = null;
+function setListening(on) {
+  listening = on;
+  $('aiMic').classList.toggle('listening', on);
+  $('aiInput').placeholder = on ? 'Ich höre zu…' : 'Frag mich etwas…';
+}
+function onSpeech(text, final, err) {
+  if (err) { setListening(false); toast(err); return; }
+  if (text) $('aiInput').value = text;
+  if (final) { setListening(false); if (text && text.trim()) aiAsk(text); }
+}
+window.neonnavSpeech = { on: (t, f, e) => onSpeech(t || '', !!f, e || null) };
+function aiListen() {
+  if (listening) { aiStopListen(); return; }
+  if (!aiKey) { aiRenderSetup(); return; }
+  if ('speechSynthesis' in window) speechSynthesis.cancel(); // nicht die eigene Ansage „hören“
+  $('aiInput').value = '';
+  setListening(true);
+  if (nativeSpeech) { try { window.webkit.messageHandlers.native.postMessage({ type: 'listen', on: true }); } catch (e) { setListening(false); } return; }
+  try {
+    webRec = new WebSR();
+    webRec.lang = 'de-DE'; webRec.interimResults = true; webRec.maxAlternatives = 1; webRec.continuous = false;
+    let last = '';
+    webRec.onresult = e => {
+      const res = [...e.results];
+      last = res.map(r => r[0].transcript).join('');
+      onSpeech(last, false, null);
+    };
+    webRec.onerror = e => { webRec = null; onSpeech('', true, e.error === 'not-allowed' ? 'Mikrofon nicht erlaubt' : e.error === 'no-speech' ? null : 'Spracheingabe fehlgeschlagen'); };
+    webRec.onend = () => { if (webRec) { webRec = null; onSpeech(last, true, null); } };
+    webRec.start();
+  } catch (e) { setListening(false); toast('Spracheingabe nicht verfügbar'); }
+}
+function aiStopListen() {
+  if (nativeSpeech) { try { window.webkit.messageHandlers.native.postMessage({ type: 'listen', on: false }); } catch (e) {} }
+  else if (webRec) { try { webRec.stop(); } catch (e) {} }
+  else setListening(false);
+}
+
 function openAi() {
   unlockAudio();
   if (!aiKey) aiRenderSetup();
@@ -2216,15 +2827,204 @@ function openAi() {
   $('aiSub').textContent = (S.mode === 'nav' || S.mode === 'free') && S.speed > 10
     ? 'Bitte nur im Stand tippen – Antworten werden vorgelesen' : 'Tipps für deine Umgebung & Fahrt';
   aiRenderChips();
+  $('aiMic').classList.toggle('hidden', !canListen);
   $('aiModal').classList.remove('hidden');
+  // Während der Fahrt direkt zuhören – kein Tippen nötig
+  if (canListen && aiKey && (S.mode === 'nav' || S.mode === 'free') && S.speed > 10 && !listening) setTimeout(aiListen, 250);
 }
-function closeAi() { $('aiModal').classList.add('hidden'); $('aiInput').blur(); }
+function closeAi() { if (listening) aiStopListen(); $('aiModal').classList.add('hidden'); $('aiInput').blur(); }
 function aiReset() { aiHistory = []; $('aiLog').innerHTML = ''; openAi(); }
+
+/* =================================================================
+   ERFOLGE, STATISTIK & ENTDECKER
+   ================================================================= */
+let stats = store.get(LS.stats, {});
+function bumpStat(k) { stats[k] = (stats[k] || 0) + 1; store.set(LS.stats, stats); }
+
+// Erkundete Kacheln (~450 × 450 m). Beim ersten Start aus vorhandenen Fahrten nachgetragen.
+const CELL = 0.004;
+const cellKey = (lat, lng) => Math.floor(lat / CELL) + ':' + Math.floor(lng / (CELL * 1.5));
+let explored = new Set(store.get(LS.explore, null) || []);
+if (!store.get(LS.explore, null)) {
+  store.get(LS.trips, []).forEach(t => (t.coords || []).forEach(c => explored.add(cellKey(c[1], c[0]))));
+  store.set(LS.explore, [...explored]);
+}
+function addExplored(coords) {
+  const before = explored.size;
+  coords.forEach(c => explored.add(cellKey(c[1], c[0])));
+  if (explored.size !== before) store.set(LS.explore, [...explored]);
+  return explored.size - before;
+}
+const exploredKm2 = () => Math.round(explored.size * 0.2);
+
+const co2Of = t => t.co2 != null ? t.co2 : (parseFloat(((t.costExtra || '').match(/([\d,]+) kg CO₂/) || [])[1]?.replace(',', '.')) || 0);
+const ACH = [
+  { id: 'first',    icon: '🚀', name: 'Erste Fahrt',       desc: 'Deine erste aufgezeichnete Fahrt',         xp: 50,  test: c => c.trips >= 1 },
+  { id: 'trips10',  icon: '🔟', name: 'Stammfahrer',       desc: '10 Fahrten',                               xp: 100, prog: c => [c.trips, 10] },
+  { id: 'trips50',  icon: '🏅', name: 'Vielfahrer',        desc: '50 Fahrten',                               xp: 250, prog: c => [c.trips, 50] },
+  { id: 'km100',    icon: '🛣️', name: '100 km',            desc: 'Insgesamt 100 km unterwegs',               xp: 100, prog: c => [c.km, 100] },
+  { id: 'km1000',   icon: '🌍', name: 'Tausender',         desc: 'Insgesamt 1.000 km unterwegs',             xp: 300, prog: c => [c.km, 1000] },
+  { id: 'km5000',   icon: '🪐', name: 'Kilometerfresser',  desc: 'Insgesamt 5.000 km unterwegs',             xp: 600, prog: c => [c.km, 5000] },
+  { id: 'long',     icon: '🏔️', name: 'Langstrecke',       desc: 'Eine Fahrt über 100 km',                   xp: 150, test: c => c.longest >= 100 },
+  { id: 'marathon', icon: '⏱️', name: 'Sitzfleisch',       desc: 'Eine Fahrt über 2 Stunden',                xp: 150, test: c => c.longestH >= 2 },
+  { id: 'night',    icon: '🦉', name: 'Nachteule',         desc: 'Fahrt zwischen 0 und 4 Uhr gestartet',     xp: 100, test: c => c.night },
+  { id: 'early',    icon: '🌅', name: 'Frühaufsteher',     desc: 'Fahrt zwischen 4 und 6 Uhr gestartet',     xp: 100, test: c => c.early },
+  { id: 'weekend',  icon: '🎉', name: 'Wochenend-Cruiser', desc: 'Am Wochenende über 30 km am Stück',        xp: 100, test: c => c.weekend },
+  { id: 'saver',    icon: '💶', name: 'Sparfuchs',         desc: 'Mind. 10 km motorisiert für max. 1 €',     xp: 100, test: c => c.saver },
+  { id: 'green',    icon: '🌱', name: 'Grün unterwegs',    desc: '50 km mit Fahrrad, E-Bike oder zu Fuß',    xp: 150, prog: c => [c.greenKm, 50] },
+  { id: 'clean',    icon: '😇', name: 'Vorbildlich',       desc: '5 Fahrten über 10 km ohne Tempoverstoß',   xp: 150, prog: c => [c.clean, 5] },
+  { id: 'arrive10', icon: '🏁', name: 'Zielsicher',        desc: '10 Ziele erreicht',                        xp: 100, prog: c => [c.arrivals, 10] },
+  { id: 'scout',    icon: '📸', name: 'Blitzer-Scout',     desc: '5 Blitzer oder Gefahren gemeldet',         xp: 100, prog: c => [c.reports, 5] },
+  { id: 'explorer', icon: '🧭', name: 'Entdecker',         desc: '50 Kacheln der Karte erkundet',            xp: 100, prog: c => [c.cells, 50] },
+  { id: 'pioneer',  icon: '🗺️', name: 'Pionier',           desc: '500 Kacheln der Karte erkundet',           xp: 300, prog: c => [c.cells, 500] },
+  { id: 'home',     icon: '🏠', name: 'Heimathafen',       desc: 'Zuhause als Favorit festgelegt',           xp: 30,  test: c => c.home },
+  { id: 'ghost',    icon: '👻', name: 'Geisterjäger',      desc: 'Deine eigene Bestzeit geschlagen',         xp: 150, test: c => c.ghostWins >= 1 },
+  { id: 'lvl5',     icon: '⭐', name: 'Turbo-Level',       desc: 'Level 5 erreicht',                         xp: 0,   prog: c => [c.level, 5] },
+  { id: 'lvl10',    icon: '🌟', name: 'Neon-Legende',      desc: 'Level 10 erreicht',                        xp: 0,   prog: c => [c.level, 10] }
+];
+const achReached = (a, c) => a.test ? a.test(c) : (([v, goal]) => v >= goal)(a.prog(c));
+let achDone = store.get(LS.ach, {});
+let achQueue = [], achShowing = false;
+
+function achContext() {
+  const trips = store.get(LS.trips, []);
+  const c = { trips: trips.length, km: 0, longest: 0, longestH: 0, night: false, early: false, weekend: false, saver: false, greenKm: 0, clean: 0,
+              arrivals: stats.arrivals || 0, reports: stats.reports || 0, ghostWins: stats.ghostWins || 0, cells: explored.size,
+              home: favs.some(f => f.type === 'home'), level: levelOf(xp) };
+  for (const t of trips) {
+    const km = (t.distance || 0) / 1000, d = new Date(t.date), h = d.getHours(), day = d.getDay();
+    c.km += km;
+    c.longest = Math.max(c.longest, km);
+    c.longestH = Math.max(c.longestH, (t.duration || 0) / 3600000);
+    if (h < 4) c.night = true; else if (h < 6) c.early = true;
+    if ((day === 0 || day === 6) && km >= 30) c.weekend = true;
+    if (km >= 10 && ['car', 'moto', 'ebike'].includes(t.kind) && t.cost != null && t.cost <= 1) c.saver = true;
+    if (['bike', 'ebike', 'foot'].includes(t.kind)) c.greenKm += km;
+    if (km >= 10 && t.over === 0 && (t.lim || 0) >= 300) c.clean++;   // nur, wenn das Tempolimit mind. 5 min bekannt war
+  }
+  return c;
+}
+function checkAchievements() {
+  let gained = 0;
+  // mehrfach prüfen: XP aus Erfolgen können Level-Erfolge auslösen
+  for (let round = 0; round < 3; round++) {
+    const c = achContext(), fresh = ACH.filter(a => !achDone[a.id] && achReached(a, c));
+    if (!fresh.length) break;
+    fresh.forEach(a => { achDone[a.id] = Date.now(); achQueue.push(a); gained += a.xp; });
+    store.set(LS.ach, achDone);
+    if (fresh.some(a => a.xp)) addXP(fresh.reduce((s, a) => s + a.xp, 0));
+  }
+  if (gained || achQueue.length) showNextAch();
+}
+function showNextAch() {
+  if (achShowing || !achQueue.length) return;
+  const a = achQueue.shift(), el = $('achPop');
+  achShowing = true;
+  $('achPopIcon').textContent = a.icon;
+  $('achPopTitle').textContent = a.name;
+  $('achPopSub').textContent = a.desc + (a.xp ? ` · +${a.xp} XP` : '');
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+  jingle(); vibrate([40, 30, 40, 30, 120]);
+  setTimeout(() => { el.classList.remove('show'); achShowing = false; showNextAch(); }, 4300);
+}
+
+function renderAch() {
+  const c = achContext(), done = ACH.filter(a => achDone[a.id]).length;
+  $('achPane').innerHTML = `<div class="text-sm text-slate-400 mb-2">${done} von ${ACH.length} freigeschaltet</div>
+    <div class="grid grid-cols-2 gap-2">${ACH.map(a => {
+      const got = achDone[a.id], p = a.prog ? a.prog(c) : null, pct = p ? clamp(p[0] / p[1] * 100, 0, 100) : (got ? 100 : 0);
+      return `<div class="rounded-2xl p-3 border ${got ? 'border-yellow-300/60 bg-yellow-300/10' : 'border-slate-800 bg-slate-900/70'}">
+        <div class="text-3xl leading-none ${got ? '' : 'grayscale opacity-40'}">${a.icon}</div>
+        <div class="mt-1 font-bold text-sm ${got ? 'text-yellow-200' : 'text-slate-300'}">${esc(a.name)}</div>
+        <div class="text-[11px] text-slate-400 leading-snug">${esc(a.desc)}</div>
+        ${got ? `<div class="text-[10px] text-yellow-300/80 mt-1">✓ ${new Date(got).toLocaleDateString('de-DE')}</div>`
+          : p ? `<div class="mt-1.5 h-1.5 rounded-full bg-slate-800 overflow-hidden"><div class="h-full rounded-full" style="width:${pct}%;background:linear-gradient(90deg,var(--neon),var(--pink))"></div></div>
+                 <div class="text-[10px] text-slate-500 mt-0.5">${Math.floor(p[0]).toLocaleString('de-DE')} / ${p[1].toLocaleString('de-DE')}</div>` : ''}
+      </div>`;
+    }).join('')}</div>`;
+}
+
+let statMonth = null;
+function renderStats() {
+  const trips = store.get(LS.trips, []), now = new Date();
+  // Start im aktuellen Monat – ist der noch leer (z. B. am Monatsanfang), im Monat der letzten Fahrt
+  if (!statMonth) { const ref = trips.length ? new Date(trips[0].date) : now; statMonth = new Date(ref.getFullYear(), ref.getMonth(), 1); }
+  const inMonth = (t, m) => { const d = new Date(t.date); return d.getFullYear() === m.getFullYear() && d.getMonth() === m.getMonth(); };
+  const prevM = new Date(statMonth.getFullYear(), statMonth.getMonth() - 1, 1);
+  const cur = trips.filter(t => inMonth(t, statMonth)), pre = trips.filter(t => inMonth(t, prevM));
+  const sum = (list, f) => list.reduce((a, t) => a + (f(t) || 0), 0);
+  const km = sum(cur, t => t.distance) / 1000, kmPrev = sum(pre, t => t.distance) / 1000;
+  const eur = sum(cur, t => t.cost), co2 = sum(cur, co2Of), ms = sum(cur, t => t.duration);
+  const maxV = cur.reduce((a, t) => Math.max(a, t.max || 0), 0), avg = ms > 0 ? km / (ms / 3600000) : 0;
+  const delta = kmPrev > 0 ? Math.round((km - kmPrev) / kmPrev * 100) : null;
+  const dests = {};
+  cur.forEach(t => { const l = t.label || ''; if (l && !/^(Freie Fahrt|Navigation)$/.test(l) && !/^Dein /.test(l)) dests[l] = (dests[l] || 0) + 1; });
+  const top = Object.entries(dests).sort((a, b) => b[1] - a[1]).slice(0, 3);
+  const isNow = statMonth.getFullYear() === now.getFullYear() && statMonth.getMonth() === now.getMonth();
+  const tile = (v, l, cls = 'text-white') => `<div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-3"><div class="font-game text-xl font-black ${cls}">${v}</div><div class="text-[10px] uppercase tracking-wider text-slate-500">${l}</div></div>`;
+  const n1 = v => v.toFixed(v < 100 ? 1 : 0).replace('.', ',');
+  $('statsPane').innerHTML = `
+    <div class="flex items-center justify-between mb-2">
+      <button id="stPrev" class="h-10 w-10 rounded-xl bg-slate-800 text-lg" aria-label="Voriger Monat">‹</button>
+      <div class="font-game font-bold text-cyan-200">${statMonth.toLocaleDateString('de-DE', { month: 'long', year: 'numeric' }).toUpperCase()}</div>
+      <button id="stNext" class="h-10 w-10 rounded-xl bg-slate-800 text-lg ${isNow ? 'opacity-30' : ''}" ${isNow ? 'disabled' : ''} aria-label="Nächster Monat">›</button>
+    </div>
+    ${cur.length ? `<div class="grid grid-cols-2 gap-2">
+      ${tile(n1(km) + ' km', 'Strecke' + (delta != null ? ` · <span class="${delta >= 0 ? 'text-lime-300' : 'text-pink-300'}">${delta >= 0 ? '+' : ''}${delta} %</span>` : ''), 'neon-text')}
+      ${tile(cur.length, cur.length === 1 ? 'Fahrt' : 'Fahrten')}
+      ${tile(fmtEur(eur), 'Kosten', 'text-lime-300')}
+      ${tile(n1(co2) + ' kg', 'CO₂', 'text-emerald-300')}
+      ${tile(fmtClock(ms).replace(/:\d\d$/, ' h'), 'Fahrzeit')}
+      ${tile(Math.round(avg) + ' / ' + Math.round(maxV), 'Ø / Max km/h', 'pink-text')}
+    </div>
+    ${top.length ? `<div class="mt-3 rounded-2xl bg-slate-900/80 border border-slate-800 p-3"><div class="text-[11px] uppercase tracking-[.2em] text-slate-400 font-game mb-1">Lieblingsziele</div>
+      ${top.map(([l, n], i) => `<div class="flex justify-between gap-2 text-sm py-0.5"><span class="truncate">${['🥇', '🥈', '🥉'][i]} ${esc(l)}</span><span class="text-slate-400 shrink-0">${n}×</span></div>`).join('')}</div>` : ''}`
+    : '<div class="text-center text-slate-400 py-8">Keine Fahrten in diesem Monat.</div>'}
+    <div class="mt-3 rounded-2xl p-3 border border-violet-400/40" style="background:linear-gradient(135deg,rgba(79,70,229,.18),rgba(236,72,153,.12))">
+      <div class="flex items-center justify-between gap-2">
+        <div><div class="font-bold">🧭 Entdecker-Karte</div>
+          <div class="text-xs text-slate-300">${explored.size.toLocaleString('de-DE')} Kacheln erkundet · ≈ ${exploredKm2().toLocaleString('de-DE')} km²</div></div>
+        <button id="exploreBtn" class="shrink-0 h-10 px-3 rounded-xl font-bold text-sm text-white" style="background:linear-gradient(135deg,#6366f1,#ec4899)">Zeigen</button>
+      </div>
+    </div>`;
+  $('stPrev').onclick = () => { statMonth = prevM; renderStats(); };
+  $('stNext').onclick = () => { statMonth = new Date(statMonth.getFullYear(), statMonth.getMonth() + 1, 1); renderStats(); };
+  $('exploreBtn').onclick = () => { closeHistory(); showExplore(); };
+}
+
+// Alle Fahrten als leuchtende Heatmap
+function showExplore() {
+  if (S.mode === 'nav' || S.mode === 'free') { toast('Während der Fahrt nicht möglich'); return; }
+  if (S.mode === 'preview') cancelPreview();
+  const trips = store.get(LS.trips, []), pts = [];
+  trips.forEach(t => (t.coords || []).forEach((c, i) => { if (i % 3 === 0) pts.push(c); }));
+  if (!pts.length) { toast('Noch keine Fahrten – los geht’s!'); return; }
+  const sample = pts.length > 40000 ? pts.filter((c, i) => i % Math.ceil(pts.length / 40000) === 0) : pts;
+  S.viewTrip = { explore: true }; S.follow = false;
+  setSrc('explore', { type: 'FeatureCollection', features: sample.map(c => ({ type: 'Feature', properties: {}, geometry: { type: 'Point', coordinates: c } })) });
+  $('viewTitle').textContent = '🧭 Entdecker-Karte';
+  $('viewStats').textContent = `${trips.length} Fahrten · ${explored.size.toLocaleString('de-DE')} Kacheln · ≈ ${exploredKm2().toLocaleString('de-DE')} km²`;
+  $('viewBar').classList.remove('hidden');
+  fitCoords(sample);
+}
 
 /* =================================================================
    FAHRTENBUCH
    ================================================================= */
-function openHistory() { renderHistory(); $('historyModal').classList.remove('hidden'); }
+let histTab = 'trips';
+function setHistTab(t) {
+  histTab = t;
+  document.querySelectorAll('#histTabs button').forEach(b => {
+    const on = b.dataset.tab === t;
+    b.className = `h-10 rounded-xl text-xs font-bold border ${on ? 'border-cyan-300 bg-cyan-400/15 text-white' : 'border-slate-700 bg-slate-900 text-slate-400'}`;
+  });
+  $('historyList').classList.toggle('hidden', t !== 'trips');
+  $('histFoot').classList.toggle('hidden', t !== 'trips');
+  $('statsPane').classList.toggle('hidden', t !== 'stats');
+  $('achPane').classList.toggle('hidden', t !== 'ach');
+  if (t === 'trips') renderHistory(); else if (t === 'stats') renderStats(); else renderAch();
+}
+function openHistory() { renderHistory(); setHistTab(histTab); $('historyModal').classList.remove('hidden'); }
 function closeHistory() { $('historyModal').classList.add('hidden'); }
 function renderHistory() {
   const trips = store.get(LS.trips, []), list = $('historyList');
@@ -2275,6 +3075,7 @@ function showTrip(t) {
 function closeTripView() {
   S.viewTrip = null;
   setSrc('history', emptyFC());
+  setSrc('explore', emptyFC());
   $('viewBar').classList.add('hidden');
   S.follow = true; $('recenterBtn').classList.remove('active-ring');
   camera();
@@ -2301,7 +3102,8 @@ function setMode(m) {
   $('gauge').classList.toggle('hidden', m === 'preview');
   $('reportCamBtn').classList.toggle('hidden', m === 'preview');
   $('reportHazBtn').classList.toggle('hidden', m === 'preview');
-  if (!driving) { $('hazNext').classList.add('hidden'); hideAlarm(); }
+  if (!driving) { $('hazNext').classList.add('hidden'); hideAlarm(); S.limit = null; renderLimit(false); }
+  if (m === 'browse') renderFavChips();
   if (m === 'free') { $('d1l').textContent = 'Zeit'; $('d2l').textContent = 'km'; $('d3l').textContent = 'Ø km/h'; }
   layout();
   if (S.pos) checkHazards();
@@ -2361,6 +3163,11 @@ $('searchInput').addEventListener('keydown', e => {
   if (e.key === 'Enter') { const q = $('searchInput').value.trim(); if (q.length >= 2) { clearTimeout(searchTimer); doSearch(q); } }
 });
 $('previewClose').onclick = cancelPreview;
+$('favBtn').onclick = () => { if (S.dest) openFavModal(S.dest); };
+document.querySelectorAll('.fav-opt').forEach(b => b.onclick = () => { if (favTarget) saveFav(favTarget, b.dataset.ft); closeFavModal(); });
+$('favRemove').onclick = () => { const f = favTarget && favAt(favTarget); if (f) removeFav(f.id); closeFavModal(); };
+$('favCancel').onclick = closeFavModal;
+$('favModal').onclick = e => { if (e.target.id === 'favModal') closeFavModal(); };
 $('goBtn').onclick = startNav;
 $('freeBtn').onclick = startFree;
 $('endBtn').onclick = () => { if (confirm(S.mode === 'nav' ? 'Navigation beenden?' : 'Freie Fahrt beenden und speichern?')) endDrive('manual'); };
@@ -2384,6 +3191,7 @@ $('aiKey').onchange = () => {
 $('aiBtn').onclick = openAi;
 $('aiClose').onclick = closeAi;
 $('aiReset').onclick = aiReset;
+$('aiMic').onclick = aiListen;
 $('aiModal').onclick = e => { if (e.target.id === 'aiModal') closeAi(); };
 $('aiForm').onsubmit = e => { e.preventDefault(); aiAsk($('aiInput').value); };
 $('aiLog').onclick = e => { const b = e.target.closest('.ai-place'); if (b) aiShowPlace(b.dataset.n); };
@@ -2409,6 +3217,7 @@ document.querySelectorAll('input.dec').forEach(inp => inp.addEventListener('inpu
   if (v !== inp.value) inp.value = v;
 }));
 $('historyClose').onclick = closeHistory;
+document.querySelectorAll('#histTabs button').forEach(b => b.onclick = () => setHistTab(b.dataset.tab));
 $('historyModal').onclick = e => { if (e.target.id === 'historyModal') closeHistory(); };
 $('viewClose').onclick = closeTripView;
 $('muteBtn').onclick = () => { muted = !muted; store.set(LS.mute, muted); renderMute(); if (!muted) { unlockAudio(); tone(1000, .08, 0, .5, 'triangle'); } else if ('speechSynthesis' in window) speechSynthesis.cancel(); };
@@ -2457,8 +3266,10 @@ renderMute();
 renderVehicleBtn();
 renderXP();
 renderRecentChips();
+renderPark();
 renderHazards();
 setMode('browse');
+setTimeout(checkAchievements, 3000); // bereits erreichte Erfolge (z. B. aus älteren Fahrten) nachträglich freischalten
 startGPS();
 })();
 </script>
