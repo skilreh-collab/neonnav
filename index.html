@@ -83,6 +83,26 @@
     .maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color:#0b0e22; }
     .maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color:#0b0e22; }
     .maplibregl-popup-close-button { color:#94a3b8; font-size:20px; padding:2px 8px; }
+    .poi-pop { min-width:220px; padding-right:14px; }
+    .poi-btn { display:flex; align-items:center; justify-content:center; gap:4px; min-height:36px; padding:6px 8px; border-radius:10px;
+               background:#1e293b; border:1px solid #334155; color:#e6f0ff; font-size:12px; font-weight:700; text-decoration:none; text-align:center;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .poi-btn:active { transform:scale(.97); }
+
+    /* KI-Beifahrer */
+    .ai-msg { max-width:88%; padding:10px 12px; border-radius:18px; font-size:14px; line-height:1.45; overflow-wrap:anywhere; }
+    .ai-user { margin-left:auto; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-bottom-right-radius:6px; }
+    .ai-bot { background:#151a33; border:1px solid rgba(167,139,250,.25); border-bottom-left-radius:6px; }
+    .ai-bot ul { margin:4px 0 0; padding-left:18px; list-style:disc; }
+    .ai-bot li { margin:2px 0; }
+    .ai-place { display:inline; padding:1px 7px; border-radius:8px; background:rgba(0,229,255,.14); border:1px solid rgba(0,229,255,.45);
+                color:#a5f3fc; font-weight:700; }
+    .ai-src { display:block; margin-top:8px; padding-top:6px; border-top:1px solid rgba(148,163,184,.2); font-size:11px; color:#94a3b8; }
+    .ai-src a { color:#a5f3fc; text-decoration:underline; }
+    .ai-chip { flex-shrink:0; height:36px; padding:0 12px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap;
+               background:#151a33; border:1px solid rgba(167,139,250,.35); color:#e9d5ff; }
+    @keyframes aiDots { 0%, 80%, 100% { opacity:.25; } 40% { opacity:1; } }
+    .ai-dots span { animation:aiDots 1.2s infinite; } .ai-dots span:nth-child(2) { animation-delay:.2s; } .ai-dots span:nth-child(3) { animation-delay:.4s; }
 
     /* Toast */
     #toast { transition:opacity .3s, transform .3s; }
@@ -183,6 +203,7 @@
 
 <!-- ===================== Seitenleiste ===================== -->
 <div id="rail" class="fixed right-3 z-20 flex flex-col gap-2">
+  <button id="aiBtn" class="rail-btn" style="background:linear-gradient(135deg,#4f46e5,#a855f7 55%,#ec4899);border-color:#c4b5fd" aria-label="KI-Beifahrer">✨</button>
   <button id="muteBtn" class="rail-btn" aria-label="Ton">🔊</button>
   <button id="viewBtn" class="rail-btn font-game text-sm font-black neon-text" aria-label="Ansicht">3D</button>
   <button id="recenterBtn" class="rail-btn text-cyan-300" aria-label="Zentrieren">◎</button>
@@ -342,6 +363,10 @@
         <div class="text-[11px] uppercase tracking-[.2em] text-slate-400 font-game mb-2">Kartenansicht</div>
         <div id="themeTabs" class="grid grid-cols-3 gap-1.5"></div>
         <p id="themeInfo" class="text-[11px] text-slate-500 mt-1"></p>
+        <label class="mt-3 flex items-center justify-between gap-3">
+          <span><span class="text-sm font-bold">☕ Orte anzeigen</span><br><span class="text-[11px] text-slate-400">Cafés, Bars, Restaurants, Supermärkte, Geschäfte …</span></span>
+          <input id="poiToggle" type="checkbox" class="w-6 h-6 accent-cyan-400">
+        </label>
       </div>
 
       <div class="border-t border-slate-800 pt-4">
@@ -358,7 +383,37 @@
         </label>
         <div id="osmInfo" class="text-[11px] text-slate-500 mt-1"></div>
       </div>
+
+      <div class="border-t border-slate-800 pt-4">
+        <div class="text-[11px] uppercase tracking-[.2em] text-slate-400 font-game mb-2">✨ KI-Beifahrer (Gemini)</div>
+        <p class="text-[11px] text-slate-400">Kostenlosen API-Schlüssel auf <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-cyan-300 underline">aistudio.google.com/apikey</a> erstellen und hier einfügen. Er bleibt nur auf deinem Gerät gespeichert.</p>
+        <input id="aiKey" type="password" autocomplete="off" placeholder="Gemini API-Schlüssel" class="mt-2 w-full h-11 rounded-xl bg-slate-950 border border-slate-700 px-3 text-white text-sm">
+        <p id="aiKeyInfo" class="text-[11px] text-slate-500 mt-1"></p>
+      </div>
     </div>
+  </div>
+</div>
+
+<!-- ===================== KI-Beifahrer ===================== -->
+<div id="aiModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center modal-wrap">
+  <div class="w-full max-w-md h-full max-h-[680px] flex flex-col rounded-3xl panel pb-2" style="background:#0a0c1e">
+    <div class="flex items-center justify-between px-4 pt-4 pb-2">
+      <div>
+        <h2 class="font-game text-lg font-black" style="background:linear-gradient(90deg,#a5b4fc,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent">✨ KI-BEIFAHRER</h2>
+        <p id="aiSub" class="text-sm text-slate-400">Tipps für deine Umgebung & Fahrt</p>
+      </div>
+      <div class="flex gap-2">
+        <button id="aiReset" class="h-11 w-11 rounded-full bg-slate-800 text-lg" aria-label="Neues Gespräch">🗑️</button>
+        <button id="aiClose" class="h-11 w-11 rounded-full bg-slate-800 text-xl" aria-label="Schließen">✕</button>
+      </div>
+    </div>
+    <div id="aiLog" class="flex-1 overflow-y-auto px-3 space-y-2"></div>
+    <div id="aiChips" class="flex gap-2 overflow-x-auto scroll-none px-3 pt-2"></div>
+    <form id="aiForm" class="px-3 pt-2 flex gap-2">
+      <input id="aiInput" type="text" autocomplete="off" enterkeyhint="send" placeholder="Frag mich etwas…"
+             class="flex-1 min-w-0 h-12 rounded-2xl bg-slate-900 border border-violet-400/40 px-4 text-white outline-none focus:border-violet-300">
+      <button id="aiSend" type="submit" class="h-12 w-12 rounded-2xl text-xl font-black text-white" style="background:linear-gradient(135deg,#6366f1,#ec4899)" aria-label="Senden">➤</button>
+    </form>
   </div>
 </div>
 
@@ -376,7 +431,8 @@ const LS = {
   xp: 'neonnav.xp.v1', mute: 'neonnav.mute.v1', view: 'neonnav.view3d.v1',
   vehicle: 'neonnav.vehicle.v1', prices: 'neonnav.prices.v1', tk: 'neonnav.tkkey.v1',
   cams: 'neonnav.osmcams.v1', osm: 'neonnav.osm.v1', install: 'neonnav.installhint.v1',
-  theme: 'neonnav.theme.v1', voice: 'neonnav.voice.v1'
+  theme: 'neonnav.theme.v1', voice: 'neonnav.voice.v1', pois: 'neonnav.pois.v1',
+  ai: 'neonnav.gemini.v1', aiModel: 'neonnav.geminimodel.v1'
 };
 const ROUTERS = {
   car:  ['https://routing.openstreetmap.de/routed-car/route/v1/driving/', 'https://router.project-osrm.org/route/v1/driving/'],
@@ -542,6 +598,7 @@ map.on('style.load', () => {
     'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 2.5, 16, 8], 'circle-color': '#ff1744',
     'circle-stroke-color': '#ffffff', 'circle-stroke-width': ['interpolate', ['linear'], ['zoom'], 9, 1, 16, 3] } });
 
+  addPoiLayer();
   mapReady = true;
   if (!firstStyle) return;
   firstStyle = false;
@@ -559,6 +616,13 @@ map.on('style.load', () => {
   });
   map.on('mouseenter', 'alts-line', () => map.getCanvas().style.cursor = 'pointer');
   map.on('mouseleave', 'alts-line', () => map.getCanvas().style.cursor = '');
+
+  map.on('click', 'pois-lbl', e => {
+    const f = e.features && e.features[0];
+    if (f) poiPopup(f);
+  });
+  map.on('mouseenter', 'pois-lbl', () => map.getCanvas().style.cursor = 'pointer');
+  map.on('mouseleave', 'pois-lbl', () => map.getCanvas().style.cursor = '');
 
   renderCams();
   // bereits vorhandene Daten nachzeichnen
@@ -599,6 +663,156 @@ function styleTweaks() {
       }, firstSymbol ? firstSymbol.id : undefined);
     }
   } catch (e) {}
+}
+
+/* --- Orte (Cafés, Bars, Supermärkte …) aus den Vektorkacheln, wie bei Apple Karten --- */
+// Kategorie: Farbe des Symbols + Zuordnung OSM-"kind" → Emoji
+const POI_CATS = [
+  { label: 'Café',          color: '#c2410c', kinds: { cafe: '☕', ice_cream: '🍦' } },
+  { label: 'Restaurant',    color: '#f97316', kinds: { restaurant: '🍴', fast_food: '🍔', food_court: '🍴', biergarten: '🍺' } },
+  { label: 'Bar',           color: '#a855f7', kinds: { bar: '🍸', pub: '🍺', nightclub: '🪩' } },
+  { label: 'Lebensmittel',  color: '#eab308', kinds: { supermarket: '🛒', convenience: '🛒', grocery: '🛒', greengrocer: '🥕', marketplace: '🧺', kiosk: '🗞️', bakery: '🥐', pastry: '🍰', butcher: '🥩', deli: '🧀', beverages: '🍾', alcohol: '🍷', wine: '🍷' } },
+  { label: 'Geschäft',      color: '#ec4899', kinds: { clothes: '👕', shoes: '👟', books: '📚', jewelry: '💍', florist: '💐', gift: '🎁', department_store: '🛍️', mall: '🛍️', electronics: '🔌', mobile_phone: '📱', chemist: '🧴', beauty: '💅', hairdresser: '💇', optician: '👓', toys: '🧸', sports: '⚽', bicycle: '🚲' } },
+  { label: 'Gesundheit',    color: '#ef4444', kinds: { pharmacy: '💊', hospital: '🏥', doctors: '🩺', dentist: '🦷', clinic: '🏥' } },
+  { label: 'Tanken & Laden', color: '#3b82f6', kinds: { fuel: '⛽', charging_station: '🔋', parking: '🅿️' } },
+  { label: 'Bank',          color: '#16a34a', kinds: { bank: '🏦', atm: '💶' } },
+  { label: 'Unterkunft',    color: '#6366f1', kinds: { hotel: '🛏️', hostel: '🛏️', guest_house: '🛏️' } },
+  { label: 'Kultur',        color: '#0d9488', kinds: { museum: '🏛️', theatre: '🎭', cinema: '🎬', attraction: '📷', library: '📖', arts_centre: '🎨' } }
+];
+const POI_KIND = {}; // kind → { emoji, color, label }
+POI_CATS.forEach(c => Object.entries(c.kinds).forEach(([k, emoji]) => POI_KIND[k] = { emoji, color: c.color, label: c.label }));
+let poisEnabled = store.get(LS.pois, true);
+
+// Rundes, farbiges Symbol mit Emoji als Kartenbild (wird nach jedem Stilwechsel neu registriert)
+function poiImage(emoji, color) {
+  const px = 2, size = 30 * px, c = document.createElement('canvas');
+  c.width = c.height = size;
+  const g = c.getContext('2d');
+  g.beginPath(); g.arc(size / 2, size / 2, size / 2 - 2 * px, 0, Math.PI * 2);
+  g.fillStyle = color; g.fill();
+  g.lineWidth = 2 * px; g.strokeStyle = '#ffffff'; g.stroke();
+  g.font = `${15 * px}px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif`;
+  g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(emoji, size / 2, size / 2 + px);
+  return { image: g.getImageData(0, 0, size, size), pixelRatio: px };
+}
+function addPoiLayer() {
+  try {
+    const sources = map.getStyle().sources || {};
+    const src = Object.keys(sources).find(k => sources[k].type === 'vector');
+    if (!src || map.getLayer('pois-lbl')) return;
+    for (const [k, p] of Object.entries(POI_KIND)) {
+      if (map.hasImage('poi-' + k)) continue;
+      const img = poiImage(p.emoji, p.color);
+      map.addImage('poi-' + k, img.image, { pixelRatio: img.pixelRatio });
+    }
+    const day = curTheme === 'day';
+    map.addLayer({
+      id: 'pois-lbl', type: 'symbol', source: src, 'source-layer': 'pois', minzoom: 15,
+      filter: ['all', ['has', 'name'], ['in', ['get', 'kind'], ['literal', Object.keys(POI_KIND)]]],
+      layout: {
+        visibility: poisEnabled ? 'visible' : 'none',
+        'icon-image': ['concat', 'poi-', ['get', 'kind']],
+        'icon-size': ['interpolate', ['linear'], ['zoom'], 15, .75, 18, 1],
+        'symbol-sort-key': ['coalesce', ['get', 'min_zoom'], ['get', 'sort_rank'], 99],
+        'text-field': ['coalesce', ['get', 'name:de'], ['get', 'name']],
+        'text-font': ['Montserrat Medium', 'Open Sans Regular', 'Noto Sans Regular', 'Noto Sans CJK JP Regular'],
+        'text-size': 11, 'text-anchor': 'top', 'text-offset': [0, 1.2], 'text-max-width': 8,
+        'text-optional': true, 'icon-padding': 4
+      },
+      paint: {
+        'text-color': day ? '#1e293b' : '#e6f0ff',
+        'text-halo-color': day ? 'rgba(255,255,255,.95)' : 'rgba(5,6,15,.9)', 'text-halo-width': 1.4
+      }
+    });
+  } catch (e) {}
+}
+function setPoisEnabled(on) {
+  poisEnabled = on; store.set(LS.pois, on);
+  if (map.getLayer('pois-lbl')) map.setLayoutProperty('pois-lbl', 'visibility', on ? 'visible' : 'none');
+}
+const CUISINES = { italian: 'Italienisch', pizza: 'Pizza', german: 'Deutsch', regional: 'Regional', bavarian: 'Bayerisch', greek: 'Griechisch',
+  turkish: 'Türkisch', kebab: 'Döner', asian: 'Asiatisch', chinese: 'Chinesisch', japanese: 'Japanisch', sushi: 'Sushi', thai: 'Thailändisch',
+  vietnamese: 'Vietnamesisch', indian: 'Indisch', mexican: 'Mexikanisch', spanish: 'Spanisch', french: 'Französisch', american: 'Amerikanisch',
+  burger: 'Burger', steak_house: 'Steakhaus', seafood: 'Fisch', vegetarian: 'Vegetarisch', vegan: 'Vegan', coffee_shop: 'Kaffee', cake: 'Kuchen',
+  ice_cream: 'Eis', sandwich: 'Sandwiches', breakfast: 'Frühstück', international: 'International', lebanese: 'Libanesisch', korean: 'Koreanisch' };
+// OSM-Öffnungszeiten lesbar machen (Mo-Fr 09:00-18:00; Sa 10:00-14:00 → deutsche Tage, je Regel eine Zeile)
+function fmtHours(oh) {
+  const days = { Mo: 'Mo', Tu: 'Di', We: 'Mi', Th: 'Do', Fr: 'Fr', Sa: 'Sa', Su: 'So', PH: 'Feiertag' };
+  return oh.split(';').map(s => s.trim()).filter(Boolean).map(s => s
+    .replace(/\b(Mo|Tu|We|Th|Fr|Sa|Su|PH)\b/g, d => days[d])
+    .replace(/\boff\b|\bclosed\b/g, 'geschlossen').replace(/24\/7/, 'rund um die Uhr').replace(/,(?=\S)/g, ', ')).slice(0, 7);
+}
+const safeUrl = u => { u = String(u || '').trim(); if (!u) return ''; if (!/^https?:\/\//i.test(u)) u = 'https://' + u; return /^https?:\/\/[^\s"'<>]+$/i.test(u) ? u : ''; };
+const shortUrl = u => u.replace(/^https?:\/\/(www\.)?/i, '').replace(/\/$/, '');
+
+// Details (Webseite, Telefon, Öffnungszeiten …) zum angetippten Ort aus OpenStreetMap – über Nominatim,
+// eng auf die Umgebung des Symbols begrenzt. Liefert OSM-Tags; Adresse wird auf addr:* abgebildet.
+async function poiDetails(name, lat, lng) {
+  const d = 0.0009; // ≈ 100 m
+  const vb = [lng - d, lat + d, lng + d, lat - d].map(v => v.toFixed(6)).join(',');
+  const r = await fetch(`${NOMINATIM}search?format=jsonv2&limit=1&bounded=1&extratags=1&addressdetails=1&accept-language=de&viewbox=${vb}&q=${encodeURIComponent(name)}`);
+  const j = await r.json();
+  if (!j || !j[0]) return null;
+  const a = j[0].address || {};
+  return Object.assign({
+    'addr:street': a.road || a.pedestrian || a.footway, 'addr:housenumber': a.house_number,
+    'addr:postcode': a.postcode, 'addr:city': a.city || a.town || a.village
+  }, j[0].extratags || {});
+}
+function poiPopup(f) {
+  const p = f.properties, info = POI_KIND[p.kind] || { emoji: '📍', label: 'Ort' };
+  const [lng, lat] = f.geometry.coordinates;
+  const place = { name: p['name:de'] || p.name, sub: info.label, lat, lng };
+  const div = document.createElement('div');
+  div.className = 'poi-pop';
+  div.innerHTML = `<div class="font-bold text-base leading-tight">${info.emoji} ${esc(place.name)}</div>
+    <div class="text-xs text-slate-400 poi-cat">${esc(info.label)}</div>
+    <div class="poi-det mt-1 text-xs text-slate-400">Details werden geladen…</div>
+    <div class="poi-info mt-2 grid grid-cols-2 gap-1.5 empty:hidden"></div>
+    <div class="poi-links mt-1.5 grid grid-cols-2 gap-1.5"></div>`;
+  const pop = new maplibregl.Popup({ offset: 16, maxWidth: '300px' }).setLngLat([lng, lat]).setDOMContent(div).addTo(map);
+
+  // Bewertungen gibt es nicht frei – daher direkt zu Google bzw. Apple Karten verlinken
+  const qs = encodeURIComponent(place.name);
+  const links = div.querySelector('.poi-links');
+  links.innerHTML = `<a class="poi-btn" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=${qs}%20${lat.toFixed(5)}%2C${lng.toFixed(5)}">⭐ Bewertungen</a>
+    <a class="poi-btn" target="_blank" rel="noopener" href="https://maps.apple.com/?q=${qs}&ll=${lat.toFixed(6)},${lng.toFixed(6)}">🗺️ Apple Karten</a>`;
+
+  if (!(S.mode === 'nav' || S.mode === 'free')) {
+    const b = document.createElement('button');
+    b.className = 'mt-2 w-full px-3 py-2 rounded-lg font-game font-bold text-black text-sm';
+    b.style.background = 'linear-gradient(90deg,#00e5ff,#7cf8ff)';
+    b.textContent = 'HIERHIN ▶';
+    b.onclick = () => { pop.remove(); setDestination(place); };
+    div.appendChild(b);
+  }
+
+  poiDetails(place.name, lat, lng).then(t => {
+    const det = div.querySelector('.poi-det');
+    if (!t) { det.textContent = 'Keine weiteren Details in OpenStreetMap.'; return; }
+    const cuisine = (t.cuisine || '').split(';').map(c => CUISINES[c.trim()] || '').filter(Boolean).join(', ');
+    if (cuisine) div.querySelector('.poi-cat').textContent = `${info.label} · ${cuisine}`;
+    const street = [t['addr:street'], t['addr:housenumber']].filter(Boolean).join(' ');
+    const city = [t['addr:postcode'], t['addr:city']].filter(Boolean).join(' ');
+    if (street) place.sub = [street, city].filter(Boolean).join(', ');
+    const rows = [];
+    if (street) rows.push(`📍 ${esc(place.sub)}`);
+    if (t.opening_hours) rows.push(`🕒 ${fmtHours(t.opening_hours).map(esc).join('<br>')}`);
+    const extras = [t.outdoor_seating === 'yes' && 'Außenbereich', t.takeaway === 'yes' && 'Zum Mitnehmen', t.delivery === 'yes' && 'Lieferung',
+                    t.wheelchair === 'yes' && 'Rollstuhlgerecht', /^(vegan|yes|only)$/.test(t['diet:vegan'] || '') && 'Vegane Gerichte'].filter(Boolean);
+    if (extras.length) rows.push(`✓ ${extras.join(' · ')}`);
+    det.innerHTML = rows.length ? rows.map(r => `<div class="mt-1 text-slate-300">${r}</div>`).join('') : '';
+
+    const web = safeUrl(t.website || t['contact:website'] || t.url);
+    const phone = String(t.phone || t['contact:phone'] || '').split(';')[0].trim();
+    const menu = safeUrl(t['website:menu']);
+    const extra = [], half = phone && menu ? '' : ' col-span-2';
+    if (web) extra.push(`<a class="poi-btn col-span-2" target="_blank" rel="noopener" href="${esc(web)}">🌐 ${esc(shortUrl(web).slice(0, 34))}</a>`);
+    if (phone) extra.push(`<a class="poi-btn${half}" href="tel:${esc(phone.replace(/[^\d+]/g, ''))}">📞 ${half ? esc(phone) : 'Anrufen'}</a>`);
+    if (menu) extra.push(`<a class="poi-btn${half}" target="_blank" rel="noopener" href="${esc(menu)}">📋 Speisekarte</a>`);
+    div.querySelector('.poi-info').innerHTML = extra.join('');
+  }).catch(() => { const det = div.querySelector('.poi-det'); if (det) det.textContent = 'Details gerade nicht verfügbar.'; });
 }
 
 function routeGradient(p) {
@@ -870,6 +1084,9 @@ function openGarage() {
 /* --- Einstellungen-Dialog (Änderungen gelten sofort) --- */
 function openSettings() {
   $('osmToggle').checked = osmEnabled;
+  $('poiToggle').checked = poisEnabled;
+  $('aiKey').value = aiKey;
+  $('aiKeyInfo').textContent = aiKey ? 'Schlüssel gespeichert ✓' : '';
   renderCams(); renderPrefs();
   $('settingsModal').classList.remove('hidden');
 }
@@ -1781,6 +1998,230 @@ async function onLongPress(ll) {
 }
 
 /* =================================================================
+   KI-BEIFAHRER (Google Gemini)
+   ================================================================= */
+const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/';
+let aiKey = store.get(LS.ai, '');
+let aiHistory = [];          // Gesprächsverlauf: [{ role: 'user' | 'model', parts: [{ text }] }]
+let aiBusy = false;
+let aiPlaces = new Map();    // kleingeschriebener Name → POI-Feature (antippbare Orte in Antworten)
+let aiMapsOk = true;         // false, sobald das Modell Google-Maps-Grounding ablehnt
+let aiArea = null;           // { lat, lng, name } – zuletzt ermittelter Ortsname
+
+async function geminiFetch(path, opts = {}) {
+  const r = await fetch(GEMINI + path, Object.assign({}, opts, { headers: { 'Content-Type': 'application/json', 'x-goog-api-key': aiKey } }));
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) {
+    const e = new Error((j.error && j.error.message) || 'HTTP ' + r.status);
+    e.status = r.status;
+    throw e;
+  }
+  return j;
+}
+const aiKeyError = e => e.status === 401 || e.status === 403 || /API key/i.test(e.message);
+
+// Modellnamen ändern sich laufend – daher das neueste stabile Flash-Modell aus der Liste wählen und 3 Tage merken
+async function aiModel(force) {
+  const c = store.get(LS.aiModel, null);
+  if (!force && c && Date.now() - c.at < 3 * 864e5) return c.name;
+  let name = 'gemini-flash-latest';
+  try {
+    const j = await geminiFetch('models?pageSize=200');
+    const score = n => { const m = n.match(/^gemini-(\d+(?:\.\d+)?)-flash(-lite)?$/); return m ? parseFloat(m[1]) * 10 + (m[2] ? 0 : 5) : -1; };
+    const best = (j.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
+      .map(m => m.name.replace(/^models\//, ''))
+      .filter(n => score(n) >= 0)
+      .sort((a, b) => score(b) - score(a))[0];
+    if (best) name = best;
+  } catch (e) { if (aiKeyError(e)) throw e; }
+  store.set(LS.aiModel, { name, at: Date.now() });
+  return name;
+}
+
+async function aiAreaName(p) {
+  if (aiArea && haversine(aiArea.lat, aiArea.lng, p.lat, p.lng) < 1500) return aiArea.name;
+  try {
+    const r = await fetch(`${NOMINATIM}reverse?format=jsonv2&zoom=16&accept-language=de&lat=${p.lat}&lon=${p.lng}`);
+    const j = await r.json();
+    const name = (j.display_name || '').split(',').map(s => s.trim()).slice(0, 4).join(', ');
+    aiArea = { lat: p.lat, lng: p.lng, name };
+    return name;
+  } catch (e) { return ''; }
+}
+
+// Orte aus den geladenen Kartenkacheln rund um den Standort – Gemini soll bevorzugt echte Orte von der Karte empfehlen
+function aiNearbyPois(p) {
+  const sources = (map.getStyle() && map.getStyle().sources) || {};
+  const src = Object.keys(sources).find(k => sources[k].type === 'vector');
+  if (!src) return [];
+  const seen = new Set(), list = [];
+  for (const f of map.querySourceFeatures(src, { sourceLayer: 'pois' })) {
+    const pr = f.properties, info = POI_KIND[pr.kind], name = pr['name:de'] || pr.name;
+    if (!info || !name || f.geometry.type !== 'Point') continue;
+    const key = name.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const [lng, lat] = f.geometry.coordinates;
+    list.push({ f, name, info, d: haversine(p.lat, p.lng, lat, lng) });
+  }
+  list.sort((a, b) => a.d - b.d);
+  const top = list.slice(0, 50);
+  aiPlaces = new Map(top.map(x => [x.name.toLowerCase(), x.f]));
+  return top;
+}
+
+async function aiSystemPrompt() {
+  const p = S.pos || (() => { const c = map.getCenter(); return { lat: c.lat, lng: c.lng }; })();
+  const now = new Date();
+  const area = await aiAreaName(p);
+  const ctx = [
+    `Zeit: ${now.toLocaleDateString('de-DE', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}, ${timeStr(now)} Uhr (${curTheme === 'day' ? 'hell' : 'dunkel'})`,
+    `${S.pos ? 'Standort' : 'Kartenmitte (kein GPS)'}: ${area || 'unbekannt'} (${p.lat.toFixed(5)}, ${p.lng.toFixed(5)})`,
+    `Fahrzeug: ${vehicleLabel()}${!isFree(vehicle) && vehicle.fuel && prices[vehicle.fuel === 'electric' ? 'kwh' : vehicle.fuel] ? ` · Preis ${fmtDec(prices[vehicle.fuel === 'electric' ? 'kwh' : vehicle.fuel])} €/${vehicle.fuel === 'electric' ? 'kWh' : 'L'}` : ''}`
+  ];
+  if (S.mode === 'nav' && S.nav) {
+    const remain = Math.max(0, S.nav.total - (S.nav.along || 0)), sec = S.nav.duration * (remain / S.nav.total);
+    const pts = [0.25, 0.5, 0.75].map(f => S.nav.coords[Math.floor((S.nav.coords.length - 1) * f)]).map(c => `${c[1].toFixed(4)}, ${c[0].toFixed(4)}`);
+    ctx.push(`Modus: Navigation zu „${S.dest ? S.dest.name : 'Ziel'}“${S.dest && S.dest.sub ? ` (${S.dest.sub})` : ''}, noch ${fmtDist(remain)}, Ankunft ca. ${timeStr(new Date(Date.now() + sec * 1000))}, aktuell ${Math.round(S.speed || 0)} km/h`);
+    ctx.push(`Punkte auf der Route: ${pts.join(' → ')}`);
+  } else if (S.mode === 'preview' && S.dest) {
+    ctx.push(`Modus: Routenvorschau zu „${S.dest.name}“${S.dest.sub ? ` (${S.dest.sub})` : ''} bei ${S.dest.lat.toFixed(5)}, ${S.dest.lng.toFixed(5)}`);
+  } else if (S.mode === 'free') {
+    ctx.push(`Modus: Freie Fahrt ohne Ziel, aktuell ${Math.round(S.speed || 0)} km/h`);
+  } else {
+    ctx.push('Modus: Karte ansehen, keine Fahrt aktiv');
+  }
+  const pois = aiNearbyPois(p).map(x => `- ${x.name} (${x.info.emoji} ${x.info.label}, ~${fmtDist(x.d)})`);
+  return `Du bist der KI-Beifahrer der Navi-App „NeonNav“. Antworte immer auf Deutsch, locker, freundlich und KURZ: höchstens etwa 80 Wörter, gern 2–4 Stichpunkte mit „- “. Der Nutzer sitzt eventuell am Steuer – keine langen Texte, keine Tabellen.
+Wenn du einen Ort aus der Liste „Orte auf der Karte“ empfiehlst, schreibe seinen Namen exakt wie in der Liste in doppelten eckigen Klammern, z. B. [[Café Luitpold]] – dann kann der Nutzer ihn antippen. Erfinde keine Orte, Öffnungszeiten oder Bewertungen; nutze Google Maps, wenn verfügbar.
+Fordere nie zu riskantem oder verbotenem Fahrverhalten auf.
+
+Aktueller Kontext:
+${ctx.map(c => '- ' + c).join('\n')}
+
+Orte auf der Karte (nächste zuerst):
+${pois.length ? pois.join('\n') : '- (gerade keine geladen – Karte weiter hineinzoomen)'}`;
+}
+
+async function aiAsk(text) {
+  text = text.trim();
+  if (!text || aiBusy) return;
+  if (!aiKey) { aiRenderSetup(); return; }
+  aiBusy = true;
+  aiAppend('user', esc(text));
+  const wait = aiAppend('bot', '<span class="ai-dots"><span>●</span><span>●</span><span>●</span></span>');
+  $('aiInput').value = '';
+  const turn = { role: 'user', parts: [{ text }] };
+  try {
+    const sys = await aiSystemPrompt();
+    let model = await aiModel(false), j = null;
+    const p = S.pos || map.getCenter();
+    for (let attempt = 0; attempt < 3 && !j; attempt++) {
+      const body = { systemInstruction: { parts: [{ text: sys }] }, contents: aiHistory.slice(-12).concat([turn]) };
+      if (aiMapsOk) {
+        body.tools = [{ googleMaps: {} }];
+        body.toolConfig = { retrievalConfig: { latLng: { latitude: p.lat, longitude: p.lng }, languageCode: 'de' } };
+      }
+      try {
+        j = await geminiFetch(`models/${model}:generateContent`, { method: 'POST', body: JSON.stringify(body) });
+      } catch (e) {
+        if (aiKeyError(e)) throw e;
+        if (e.status === 404) { model = await aiModel(true); continue; }          // Modell abgeschaltet → neu wählen
+        if (aiMapsOk && e.status === 400) { aiMapsOk = false; continue; }         // Maps-Grounding nicht unterstützt
+        throw e;
+      }
+    }
+    const cand = j && j.candidates && j.candidates[0];
+    const answer = cand && cand.content && (cand.content.parts || []).filter(x => x.text && !x.thought).map(x => x.text).join('').trim();
+    if (!answer) throw new Error(cand && cand.finishReason === 'SAFETY' ? 'Dazu kann ich leider nichts sagen.' : 'Keine Antwort erhalten.');
+    aiHistory.push(turn, { role: 'model', parts: [{ text: answer }] });
+    // Google-Maps-Quellen müssen direkt unter der Antwort stehen
+    const chunks = (cand.groundingMetadata && cand.groundingMetadata.groundingChunks) || [];
+    const srcs = [], seenUri = new Set();
+    for (const c of chunks) {
+      const s = c.maps || c.web;
+      const uri = s && safeUrl(s.uri);
+      if (!uri || seenUri.has(uri)) continue;
+      seenUri.add(uri); srcs.push({ uri, title: s.title || shortUrl(uri), maps: !!c.maps });
+    }
+    let html = aiFormat(answer);
+    if (srcs.length) html += `<span class="ai-src">${srcs.some(s => s.maps) ? 'Quelle: Google Maps · ' : 'Quellen: '}${srcs.slice(0, 5).map(s =>
+      `<a href="${esc(s.uri)}" target="_blank" rel="noopener">${esc(s.title)}</a>`).join(' · ')}</span>`;
+    wait.innerHTML = html;
+    if (S.mode === 'nav' || S.mode === 'free') speak(answer.replace(/\[\[(.+?)\]\]/g, '$1').replace(/[*#_`]/g, '').replace(/^\s*-\s+/gm, '').slice(0, 400));
+  } catch (e) {
+    wait.innerHTML = aiKeyError(e)
+      ? '🔑 Der API-Schlüssel wurde abgelehnt. Bitte in den Einstellungen prüfen.'
+      : e.status === 429 ? '⏳ Zu viele Anfragen – kurz warten und nochmal versuchen.'
+      : `⚠️ ${esc(e.message || 'Keine Verbindung zu Gemini.')}`;
+  } finally {
+    aiBusy = false;
+    $('aiLog').scrollTop = $('aiLog').scrollHeight;
+  }
+}
+
+// Leichtes Markdown: **fett**, Stichpunkte, [[Ort]] als antippbarer Knopf
+function aiFormat(t) {
+  const inline = s => esc(s)
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/\[\[(.+?)\]\]/g, (_, n) => `<button class="ai-place" data-n="${n}">📍 ${n}</button>`);
+  let html = '', inList = false;
+  for (const line of t.split('\n')) {
+    const m = line.match(/^\s*[-*•]\s+(.*)$/);
+    if (m) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${inline(m[1])}</li>`; continue; }
+    if (inList) { html += '</ul>'; inList = false; }
+    if (line.trim()) html += `<div>${inline(line.replace(/^#+\s*/, ''))}</div>`;
+  }
+  return html + (inList ? '</ul>' : '');
+}
+function aiAppend(who, html) {
+  const el = document.createElement('div');
+  el.className = 'ai-msg ' + (who === 'user' ? 'ai-user' : 'ai-bot');
+  el.innerHTML = html;
+  $('aiLog').appendChild(el);
+  $('aiLog').scrollTop = $('aiLog').scrollHeight;
+  return el;
+}
+function aiShowPlace(name) {
+  const f = aiPlaces.get(name.toLowerCase());
+  closeAi();
+  if (!f) { openSearch(); $('searchInput').value = name; doSearch(name); return; }
+  if (S.follow) { S.follow = false; $('recenterBtn').classList.add('active-ring'); }
+  map.flyTo({ center: f.geometry.coordinates, zoom: Math.max(map.getZoom(), 17), duration: 900 });
+  map.once('moveend', () => poiPopup(f));
+}
+function aiRenderSetup() {
+  $('aiLog').innerHTML = '';
+  const el = aiAppend('bot', `Hi! Ich bin dein KI-Beifahrer ✨<br>Dafür brauche ich einen kostenlosen <b>Gemini API-Schlüssel</b> von Google.
+    <button id="aiSetup" class="mt-2 w-full h-11 rounded-xl font-bold text-white" style="background:linear-gradient(135deg,#6366f1,#ec4899)">🔑 Schlüssel eintragen</button>`);
+  el.querySelector('#aiSetup').onclick = () => { closeAi(); openSettings(); setTimeout(() => $('aiKey').focus(), 50); };
+}
+function aiRenderChips() {
+  const evening = new Date().getHours() >= 17;
+  const chips = S.mode === 'nav' ? ['☕ Pause-Tipp auf meiner Route', '🍽️ Essen am Ziel?', '🅿️ Wo parke ich am Ziel?', '⛽ Tipps zum Sprit sparen']
+    : S.mode === 'preview' ? ['🎯 Was gibt es am Ziel?', '🍽️ Essen am Ziel?', '🅿️ Parken am Ziel?']
+    : S.mode === 'free' ? ['☕ Kaffee-Stopp in der Nähe', '🛣️ Schöne Strecke für eine Spritztour?', '⛽ Tipps zum Sprit sparen']
+    : [evening ? '🍸 Schöne Bar für heute Abend?' : '☕ Gutes Café in der Nähe?', '🍽️ Wo kann ich hier gut essen?', '🎯 Was kann man hier unternehmen?', '🛒 Supermarkt, der noch offen hat?'];
+  $('aiChips').innerHTML = chips.map(c => `<button type="button" class="ai-chip">${esc(c)}</button>`).join('');
+  $('aiChips').querySelectorAll('button').forEach(b => b.onclick = () => aiAsk(b.textContent.replace(/^\S+\s/, '')));
+}
+function openAi() {
+  unlockAudio();
+  if (!aiKey) aiRenderSetup();
+  else if (!$('aiLog').children.length || $('aiSetup')) {
+    $('aiLog').innerHTML = '';
+    aiAppend('bot', 'Hi! Ich bin dein KI-Beifahrer ✨ Frag mich nach Cafés, Restaurants, Ausflugstipps oder deiner Route.');
+  }
+  $('aiSub').textContent = (S.mode === 'nav' || S.mode === 'free') && S.speed > 10
+    ? 'Bitte nur im Stand tippen – Antworten werden vorgelesen' : 'Tipps für deine Umgebung & Fahrt';
+  aiRenderChips();
+  $('aiModal').classList.remove('hidden');
+}
+function closeAi() { $('aiModal').classList.add('hidden'); $('aiInput').blur(); }
+function aiReset() { aiHistory = []; $('aiLog').innerHTML = ''; openAi(); }
+
+/* =================================================================
    FAHRTENBUCH
    ================================================================= */
 function openHistory() { renderHistory(); $('historyModal').classList.remove('hidden'); }
@@ -1934,6 +2375,18 @@ $('settingsBtn').onclick = openSettings;
 $('settingsClose').onclick = closeSettings;
 $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') closeSettings(); };
 $('osmToggle').onchange = () => setOsmEnabled($('osmToggle').checked);
+$('poiToggle').onchange = () => setPoisEnabled($('poiToggle').checked);
+$('aiKey').onchange = () => {
+  aiKey = $('aiKey').value.trim(); store.set(LS.ai, aiKey);
+  store.set(LS.aiModel, null); aiMapsOk = true;
+  $('aiKeyInfo').textContent = aiKey ? 'Schlüssel gespeichert ✓' : 'Schlüssel entfernt';
+};
+$('aiBtn').onclick = openAi;
+$('aiClose').onclick = closeAi;
+$('aiReset').onclick = aiReset;
+$('aiModal').onclick = e => { if (e.target.id === 'aiModal') closeAi(); };
+$('aiForm').onsubmit = e => { e.preventDefault(); aiAsk($('aiInput').value); };
+$('aiLog').onclick = e => { const b = e.target.closest('.ai-place'); if (b) aiShowPlace(b.dataset.n); };
 $('voiceTest').onclick = testVoice;
 $('tkLoad').onclick = () => loadFuelPrices(false);
 $('modelSel').onchange = () => {

@@ -1,5 +1,5 @@
 // NeonNav Service Worker – macht die App installierbar und offline startfähig
-const VERSION = 'neonnav-v4';
+const VERSION = 'neonnav-v5';
 const TILE_CACHE = 'neonnav-tiles-v1';
 const MAX_TILES = 2500;
 
@@ -9,9 +9,10 @@ const CDN = [
   'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
   'https://cdn.tailwindcss.com'
 ];
-// Live-Daten nie aus dem Cache: Routing, Suche, Blitzer, Spritpreise
+// Live-Daten nie aus dem Cache: Routing, Suche, Blitzer, Spritpreise, KI
 const LIVE_HOSTS = ['routing.openstreetmap.de', 'router.project-osrm.org', 'nominatim.openstreetmap.org',
-                    'overpass-api.de', 'overpass.kumi.systems', 'creativecommons.tankerkoenig.de'];
+                    'overpass-api.de', 'overpass.kumi.systems', 'creativecommons.tankerkoenig.de',
+                    'generativelanguage.googleapis.com'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(async c => {
