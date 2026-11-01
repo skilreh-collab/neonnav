@@ -283,10 +283,14 @@
         <div id="fuelTabs" class="grid grid-cols-4 gap-1.5"></div>
       </div>
       <div id="modelWrap">
+        <div id="brandWrap" class="hidden mb-2">
+          <div class="text-[11px] uppercase tracking-[.2em] text-slate-400 font-game mb-2">Marke</div>
+          <select id="brandSel" class="w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white"></select>
+        </div>
         <div class="text-[11px] uppercase tracking-[.2em] text-slate-400 font-game mb-2">Modell</div>
         <select id="modelSel" class="w-full h-12 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white"></select>
         <div class="mt-2 flex items-center gap-2">
-          <input id="consInput" type="number" step="0.1" min="0" inputmode="decimal" class="w-28 h-12 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game">
+          <input id="consInput" type="text" inputmode="decimal" autocomplete="off" placeholder="0,0" class="dec w-28 h-12 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game">
           <span id="consUnit" class="text-slate-300 text-sm">L / 100 km</span>
         </div>
         <p class="text-[11px] text-slate-500 mt-1">Richtwerte nach Herstellerangabe, gerundet. Trag deinen echten Verbrauch ein, dann wird's genauer.</p>
@@ -299,10 +303,10 @@
           <div id="priceStamp" class="text-[11px] text-slate-500"></div>
         </div>
         <div class="grid grid-cols-2 gap-2">
-          <label class="text-xs text-slate-400">Super E5 €/L<input id="pE5" type="number" step="0.001" inputmode="decimal" class="mt-1 w-full h-11 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game"></label>
-          <label class="text-xs text-slate-400">Super E10 €/L<input id="pE10" type="number" step="0.001" inputmode="decimal" class="mt-1 w-full h-11 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game"></label>
-          <label class="text-xs text-slate-400">Diesel €/L<input id="pDiesel" type="number" step="0.001" inputmode="decimal" class="mt-1 w-full h-11 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game"></label>
-          <label class="text-xs text-slate-400">Strom €/kWh<input id="pKwh" type="number" step="0.01" inputmode="decimal" class="mt-1 w-full h-11 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game"></label>
+          <label class="text-xs text-slate-400">Super E5 €/L<input id="pE5" type="text" inputmode="decimal" autocomplete="off" placeholder="1,859" class="dec mt-1 w-full h-11 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game"></label>
+          <label class="text-xs text-slate-400">Super E10 €/L<input id="pE10" type="text" inputmode="decimal" autocomplete="off" placeholder="1,799" class="dec mt-1 w-full h-11 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game"></label>
+          <label class="text-xs text-slate-400">Diesel €/L<input id="pDiesel" type="text" inputmode="decimal" autocomplete="off" placeholder="1,729" class="dec mt-1 w-full h-11 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game"></label>
+          <label class="text-xs text-slate-400">Strom €/kWh<input id="pKwh" type="text" inputmode="decimal" autocomplete="off" placeholder="0,36" class="dec mt-1 w-full h-11 rounded-xl bg-slate-900 border border-slate-700 px-3 text-white font-game"></label>
         </div>
         <div class="mt-3 rounded-xl bg-slate-900/70 border border-slate-800 p-3">
           <div class="text-sm font-bold">⛽ Live-Spritpreise (Tankerkönig)</div>
@@ -326,6 +330,7 @@
   </div>
 </div>
 
+<script src="cars.js"></script>
 <script>
 (() => {
 'use strict';
@@ -696,6 +701,38 @@ const isFree = v => v.kind === 'bike' || v.kind === 'foot';
 const profileOf = v => (v.kind === 'bike' || v.kind === 'ebike') ? 'bike' : v.kind === 'foot' ? 'foot' : 'car';
 const fmtEur = e => e.toLocaleString('de-DE', { style: 'currency', currency: 'EUR' });
 const presetKey = (kind, fuel) => `${kind}:${fuel === 'electric' ? 'electric' : (fuel === 'diesel' ? 'diesel' : 'benzin')}`;
+// Zahlen deutsch anzeigen (Komma) und tolerant einlesen (Komma oder Punkt)
+const fmtDec = v => (v == null || v === '' ? '' : String(v).replace('.', ','));
+const parseDec = s => parseFloat(String(s).trim().replace(',', '.'));
+
+// Auto-Datenbank aus cars.js: { Marke: { benzin: [[Modell, Verbrauch]], diesel: [...], electric: [...] } }
+const CARS = (() => {
+  const db = {}, cats = { b: 'benzin', d: 'diesel', e: 'electric' };
+  const cmp = (a, b) => a[0].localeCompare(b[0], 'de', { numeric: true, sensitivity: 'base' });
+  Object.entries(window.NN_CARS || {}).forEach(([brand, groups]) => {
+    db[brand] = {};
+    Object.entries(groups).forEach(([k, s]) => {
+      db[brand][cats[k]] = s.split('|').map(e => {
+        const i = e.lastIndexOf(':');
+        return [e.slice(0, i).trim(), parseFloat(e.slice(i + 1))];
+      }).filter(([n, c]) => n && c > 0).sort(cmp);
+    });
+  });
+  return db;
+})();
+const fuelCat = fuel => presetKey('car', fuel).split(':')[1];
+const brandsFor = fuel => Object.keys(CARS).filter(b => (CARS[b][fuelCat(fuel)] || []).length).sort((a, b) => a.localeCompare(b, 'de'));
+// Modellliste für Fahrzeugtyp/Antrieb (bei Autos je Marke), Namen inkl. Marke
+function modelList(kind, fuel, brand) {
+  if (kind !== 'car') return PRESETS[presetKey(kind, fuel)] || [];
+  return ((CARS[brand] || {})[fuelCat(fuel)] || []).map(([n, c]) => [`${brand} ${n}`, c]);
+}
+// Marke zu einem gespeicherten Modellnamen finden (auch für ältere Einträge)
+function brandOf(model, fuel) {
+  const brands = brandsFor(fuel);
+  return brands.find(b => modelList('car', fuel, b).some(([n]) => n === model))
+    || brands.find(b => String(model || '').startsWith(b + ' ')) || null;
+}
 
 function speedFactor(kind, avg) {
   if (kind !== 'car' && kind !== 'moto') return 1;
@@ -724,7 +761,8 @@ function renderVehicleBtn() { $('garageBtn').textContent = kindInfo(vehicle.kind
 let draft = null;
 function openGarage() {
   draft = Object.assign({}, vehicle);
-  $('pE5').value = prices.e5; $('pE10').value = prices.e10; $('pDiesel').value = prices.diesel; $('pKwh').value = prices.kwh;
+  if (draft.kind === 'car' && !draft.brand) draft.brand = brandOf(draft.model, draft.fuel) || 'VW';
+  $('pE5').value = fmtDec(prices.e5); $('pE10').value = fmtDec(prices.e10); $('pDiesel').value = fmtDec(prices.diesel); $('pKwh').value = fmtDec(prices.kwh);
   $('tkKey').value = tkKey;
   $('osmToggle').checked = osmEnabled;
   renderPriceStamp(); renderCams(); renderGarage();
@@ -755,29 +793,42 @@ function renderGarage() {
   const free = isFree(draft);
   $('modelWrap').classList.toggle('hidden', free);
   $('noCostInfo').classList.toggle('hidden', !free);
+  const isCar = draft.kind === 'car';
+  $('brandWrap').classList.toggle('hidden', free || !isCar);
   if (!free) {
-    const list = PRESETS[presetKey(draft.kind, draft.fuel)] || [];
-    $('modelSel').innerHTML = list.map(([n, c]) => `<option value="${esc(n)}" ${draft.model === n ? 'selected' : ''}>${esc(n)} · ${String(c).replace('.', ',')}</option>`).join('')
+    if (isCar) {
+      const brands = brandsFor(draft.fuel);
+      if (!brands.includes(draft.brand)) draft.brand = brands[0];
+      $('brandSel').innerHTML = brands.map(b => `<option value="${esc(b)}" ${draft.brand === b ? 'selected' : ''}>${esc(b)} (${modelList('car', draft.fuel, b).length})</option>`).join('');
+    }
+    const list = modelList(draft.kind, draft.fuel, draft.brand);
+    // Bei Autos steht die Marke schon oben – im Modellmenü nur Modell + Motor zeigen
+    const short = n => isCar && n.startsWith(draft.brand + ' ') ? n.slice(draft.brand.length + 1) : n;
+    $('modelSel').innerHTML = list.map(([n, c]) => `<option value="${esc(n)}" ${draft.model === n ? 'selected' : ''}>${esc(short(n))} · ${fmtDec(c)}</option>`).join('')
       + `<option value="__custom" ${list.some(([n]) => n === draft.model) ? '' : 'selected'}>✏️ Eigenes Fahrzeug</option>`;
-    $('consInput').value = draft.cons;
+    $('consInput').value = fmtDec(draft.cons);
     $('consUnit').textContent = draft.fuel === 'electric' ? 'kWh / 100 km' : 'L / 100 km';
   }
 }
 function pickFirstPreset() {
   if (isFree(draft)) { draft.model = ''; draft.cons = 0; return; }
-  const list = PRESETS[presetKey(draft.kind, draft.fuel)] || [];
+  if (draft.kind === 'car') {
+    const brands = brandsFor(draft.fuel);
+    if (!brands.includes(draft.brand)) draft.brand = brands.includes('VW') ? 'VW' : brands[0];
+  }
+  const list = modelList(draft.kind, draft.fuel, draft.brand);
   if (list.length) { draft.model = list[0][0]; draft.cons = list[0][1]; }
 }
 function saveGarage() {
   if (!isFree(draft)) {
-    const c = parseFloat(String($('consInput').value).replace(',', '.'));
+    const c = parseDec($('consInput').value);
     if (!(c > 0 && c < 60)) { toast('Bitte einen gültigen Verbrauch eingeben'); return; }
     draft.cons = c;
-    if ($('modelSel').value === '__custom') draft.model = draft.model && !(PRESETS[presetKey(draft.kind, draft.fuel)] || []).some(([n]) => n === draft.model) ? draft.model : 'Eigenes Fahrzeug';
+    if ($('modelSel').value === '__custom') draft.model = draft.model && !modelList(draft.kind, draft.fuel, draft.brand).some(([n]) => n === draft.model) ? draft.model : 'Eigenes Fahrzeug';
   }
   const prevProfile = profileOf(vehicle);
   vehicle = draft; store.set(LS.vehicle, vehicle);
-  const num = id => { const v = parseFloat(String($(id).value).replace(',', '.')); return v > 0 && v < 10 ? v : null; };
+  const num = id => { const v = parseDec($(id).value); return v > 0 && v < 10 ? v : null; };
   const np = { e5: num('pE5'), e10: num('pE10'), diesel: num('pDiesel'), kwh: num('pKwh') };
   const changed = ['e5', 'e10', 'diesel', 'kwh'].some(k => np[k] != null && Math.abs(np[k] - prices[k]) > 1e-9);
   ['e5', 'e10', 'diesel', 'kwh'].forEach(k => { if (np[k] != null) prices[k] = np[k]; });
@@ -813,7 +864,7 @@ async function loadFuelPrices(silent) {
     store.set(LS.prices, prices);
     if (!silent) {
       tkKey = key; store.set(LS.tk, tkKey);
-      $('pE5').value = prices.e5; $('pE10').value = prices.e10; $('pDiesel').value = prices.diesel;
+      $('pE5').value = fmtDec(prices.e5); $('pE10').value = fmtDec(prices.e10); $('pDiesel').value = fmtDec(prices.diesel);
       renderPriceStamp();
       toast(`⛽ Live-Preise geladen (Ø ${st.length} Tankstellen)`);
     }
@@ -1824,9 +1875,22 @@ $('tkLoad').onclick = () => loadFuelPrices(false);
 $('modelSel').onchange = () => {
   const v = $('modelSel').value;
   if (v === '__custom') { draft.model = 'Eigenes Fahrzeug'; return; }
-  const hit = (PRESETS[presetKey(draft.kind, draft.fuel)] || []).find(([n]) => n === v);
-  if (hit) { draft.model = hit[0]; draft.cons = hit[1]; $('consInput').value = hit[1]; }
+  const hit = modelList(draft.kind, draft.fuel, draft.brand).find(([n]) => n === v);
+  if (hit) { draft.model = hit[0]; draft.cons = hit[1]; $('consInput').value = fmtDec(hit[1]); }
 };
+$('brandSel').onchange = () => {
+  draft.brand = $('brandSel').value;
+  const list = modelList('car', draft.fuel, draft.brand);
+  if (list.length) { draft.model = list[0][0]; draft.cons = list[0][1]; }
+  renderGarage();
+};
+// Dezimalfelder: nur Ziffern und ein Trennzeichen (Komma oder Punkt) zulassen
+document.querySelectorAll('input.dec').forEach(inp => inp.addEventListener('input', () => {
+  let v = inp.value.replace(/[^0-9.,]/g, '');
+  const i = v.search(/[.,]/);
+  if (i >= 0) v = v.slice(0, i + 1) + v.slice(i + 1).replace(/[.,]/g, '');
+  if (v !== inp.value) inp.value = v;
+}));
 $('historyClose').onclick = closeHistory;
 $('historyModal').onclick = e => { if (e.target.id === 'historyModal') closeHistory(); };
 $('viewClose').onclick = closeTripView;
