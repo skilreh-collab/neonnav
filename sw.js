@@ -1,5 +1,5 @@
 // NeonNav Service Worker – macht die App installierbar und offline startfähig
-const VERSION = 'neonnav-v3';
+const VERSION = 'neonnav-v4';
 const TILE_CACHE = 'neonnav-tiles-v1';
 const MAX_TILES = 2500;
 

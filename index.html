@@ -36,6 +36,8 @@
     .glow-btn { box-shadow:0 0 24px rgba(0,229,255,.5); }
     .safe-top { padding-top:max(10px, env(safe-area-inset-top)); }
     .safe-bottom { padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+    /* Dialoge mittig, mit Abstand zu Notch, Home-Indikator und Rändern */
+    .modal-wrap { padding:max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
     .scroll-none::-webkit-scrollbar { display:none; }
     .scroll-none { scrollbar-width:none; }
 
@@ -108,6 +110,7 @@
   <div class="flex gap-2 pointer-events-auto">
     <button id="garageBtn" class="panel h-11 w-11 rounded-2xl text-lg" aria-label="Fahrzeug & Preise">🚗</button>
     <button id="historyBtn" class="panel h-11 w-11 rounded-2xl text-lg" aria-label="Fahrtenbuch">📒</button>
+    <button id="settingsBtn" class="panel h-11 w-11 rounded-2xl text-lg" aria-label="Einstellungen">⚙️</button>
   </div>
 </div>
 
@@ -248,8 +251,8 @@
 </div>
 
 <!-- ===================== Fahrtenbuch ===================== -->
-<div id="historyModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end justify-center">
-  <div class="w-full max-w-md max-h-[85dvh] flex flex-col rounded-t-3xl panel safe-bottom" style="background:#0a0c1e">
+<div id="historyModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center modal-wrap">
+  <div class="w-full max-w-md max-h-full flex flex-col rounded-3xl panel pb-2" style="background:#0a0c1e">
     <div class="flex items-center justify-between px-4 pt-4 pb-2">
       <div>
         <h2 class="font-game text-lg font-black neon-text">FAHRTENBUCH</h2>
@@ -266,8 +269,8 @@
 </div>
 
 <!-- ===================== Garage & Preise ===================== -->
-<div id="garageModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-end justify-center">
-  <div class="w-full max-w-md max-h-[90dvh] flex flex-col rounded-t-3xl panel safe-bottom" style="background:#0a0c1e">
+<div id="garageModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center modal-wrap">
+  <div class="w-full max-w-md max-h-full flex flex-col rounded-3xl panel pb-2" style="background:#0a0c1e">
     <div class="flex items-center justify-between px-4 pt-4 pb-2">
       <div>
         <h2 class="font-game text-lg font-black neon-text">GARAGE</h2>
@@ -317,12 +320,32 @@
           <button id="tkLoad" class="mt-2 w-full h-11 rounded-xl font-bold text-black text-sm" style="background:linear-gradient(90deg,var(--lime),#5effc4)">Preise in meiner Nähe laden</button>
         </div>
       </div>
+    </div>
+    <div class="px-4 py-3 border-t border-slate-800">
+      <button id="garageSave" class="w-full h-14 rounded-2xl font-game font-black text-lg text-black glow-btn" style="background:linear-gradient(90deg,var(--neon),#7cf8ff)">SPEICHERN</button>
+    </div>
+  </div>
+</div>
 
-      <div class="border-t border-slate-800 pt-4">
+<!-- ===================== Einstellungen ===================== -->
+<div id="settingsModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center modal-wrap">
+  <div class="w-full max-w-md max-h-full flex flex-col rounded-3xl panel pb-2" style="background:#0a0c1e">
+    <div class="flex items-center justify-between px-4 pt-4 pb-2">
+      <div>
+        <h2 class="font-game text-lg font-black neon-text">EINSTELLUNGEN</h2>
+        <p class="text-sm text-slate-400">Karte, Sprache & Blitzer</p>
+      </div>
+      <button id="settingsClose" class="h-11 w-11 rounded-full bg-slate-800 text-xl" aria-label="Schließen">✕</button>
+    </div>
+    <div class="overflow-y-auto px-4 pb-4 space-y-4 flex-1">
+      <div>
         <div class="text-[11px] uppercase tracking-[.2em] text-slate-400 font-game mb-2">Kartenansicht</div>
         <div id="themeTabs" class="grid grid-cols-3 gap-1.5"></div>
         <p id="themeInfo" class="text-[11px] text-slate-500 mt-1"></p>
-        <div class="text-[11px] uppercase tracking-[.2em] text-slate-400 font-game mb-2 mt-4">Sprachansage</div>
+      </div>
+
+      <div class="border-t border-slate-800 pt-4">
+        <div class="text-[11px] uppercase tracking-[.2em] text-slate-400 font-game mb-2">Sprachansage</div>
         <div id="voiceTabs" class="grid grid-cols-2 gap-1.5"></div>
         <button id="voiceTest" class="mt-2 w-full h-11 rounded-xl bg-slate-800 border border-slate-700 text-sm font-bold">▶︎ Stimme testen</button>
         <p id="voiceInfo" class="text-[11px] text-slate-500 mt-1"></p>
@@ -335,9 +358,6 @@
         </label>
         <div id="osmInfo" class="text-[11px] text-slate-500 mt-1"></div>
       </div>
-    </div>
-    <div class="px-4 py-3 border-t border-slate-800">
-      <button id="garageSave" class="w-full h-14 rounded-2xl font-game font-black text-lg text-black glow-btn" style="background:linear-gradient(90deg,var(--neon),#7cf8ff)">SPEICHERN</button>
     </div>
   </div>
 </div>
@@ -704,7 +724,7 @@ function pickVoice() {
   const hit = sorted.find(v => VOICE_NAMES[voicePref].test(v.name) && !VOICE_NAMES[other].test(v.name));
   voiceMatched = !!hit;
   voiceDE = hit || sorted.find(v => !VOICE_NAMES[other].test(v.name)) || sorted[0] || null;
-  if (!$('garageModal').classList.contains('hidden')) renderPrefs();
+  if (!$('settingsModal').classList.contains('hidden')) renderPrefs();
 }
 if ('speechSynthesis' in window) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
 
@@ -843,9 +863,21 @@ function openGarage() {
   if (draft.kind === 'car' && !draft.brand) draft.brand = brandOf(draft.model, draft.fuel) || 'VW';
   $('pE5').value = fmtDec(prices.e5); $('pE10').value = fmtDec(prices.e10); $('pDiesel').value = fmtDec(prices.diesel); $('pKwh').value = fmtDec(prices.kwh);
   $('tkKey').value = tkKey;
-  $('osmToggle').checked = osmEnabled;
-  renderPriceStamp(); renderCams(); renderGarage(); renderPrefs();
+  renderPriceStamp(); renderGarage();
   $('garageModal').classList.remove('hidden');
+}
+
+/* --- Einstellungen-Dialog (Änderungen gelten sofort) --- */
+function openSettings() {
+  $('osmToggle').checked = osmEnabled;
+  renderCams(); renderPrefs();
+  $('settingsModal').classList.remove('hidden');
+}
+function closeSettings() { $('settingsModal').classList.add('hidden'); }
+function setOsmEnabled(on) {
+  if (on === osmEnabled) return;
+  osmEnabled = on; store.set(LS.osm, osmEnabled); renderCams();
+  if (osmEnabled) { osmArea = null; osmAreaAt = 0; maybeLoadCamsArea(); }
 }
 function renderPrefs() {
   const tab = (on, html) => `class="h-12 rounded-xl text-xs font-bold border ${on ? 'border-cyan-300 bg-cyan-400/15 text-white' : 'border-slate-700 bg-slate-900 text-slate-400'}">${html}`;
@@ -939,8 +971,6 @@ function saveGarage() {
   if (changed) prices.source = 'manual';
   store.set(LS.prices, prices);
   tkKey = $('tkKey').value.trim(); store.set(LS.tk, tkKey);
-  const osmNow = $('osmToggle').checked;
-  if (osmNow !== osmEnabled) { osmEnabled = osmNow; store.set(LS.osm, osmEnabled); renderCams(); if (osmEnabled) { osmArea = null; osmAreaAt = 0; maybeLoadCamsArea(); } }
   renderVehicleBtn(); closeGarage();
   toast(`${vehicleLabel()} gespeichert`);
   // Vorschau neu berechnen, wenn sich das Routing-Profil geändert hat
@@ -1900,6 +1930,10 @@ $('garageBtn').onclick = openGarage;
 $('garageClose').onclick = closeGarage;
 $('garageModal').onclick = e => { if (e.target.id === 'garageModal') closeGarage(); };
 $('garageSave').onclick = saveGarage;
+$('settingsBtn').onclick = openSettings;
+$('settingsClose').onclick = closeSettings;
+$('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') closeSettings(); };
+$('osmToggle').onchange = () => setOsmEnabled($('osmToggle').checked);
 $('voiceTest').onclick = testVoice;
 $('tkLoad').onclick = () => loadFuelPrices(false);
 $('modelSel').onchange = () => {
