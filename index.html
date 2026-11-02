@@ -73,6 +73,11 @@
     /* Kompass im Manöver-Banner */
     .compass { position:relative; width:56px; height:56px; border-radius:50%; background:rgba(0,0,0,.5); border:1.5px solid rgba(0,229,255,.45); }
     .compass-rose { position:absolute; inset:0; transition:transform .4s linear; }
+    /* Freie Fahrt: Banner fliegt nach dem Start in das Fahrzeug hinein */
+    #navTop.fly-in > div { transition:transform .85s cubic-bezier(.55,0,.8,.3), opacity .85s ease-in;
+                           transform:translate(var(--fx, 0px), var(--fy, 0px)) scale(.05); opacity:0; }
+    @keyframes puckGulp { 0% { transform:scale(1); } 40% { transform:scale(1.35); } 100% { transform:scale(1); } }
+    .puck.gulp svg { animation:puckGulp .5s ease-out; }
     .compass-dir { position:absolute; inset:0; display:grid; place-items:center; font:900 15px Inter, system-ui, sans-serif; color:#fff; }
 
     /* Gefahren-Marker */
@@ -183,6 +188,9 @@
     </div>
   </div>
 </div>
+
+<!-- Kompass-Platz bei freier Fahrt, wenn das Banner ausgeblendet ist -->
+<div id="compassFloat" class="hidden fixed top-0 right-3 z-30 safe-top"></div>
 
 <!-- ===================== Historien-Leiste ===================== -->
 <div id="viewBar" class="hidden fixed inset-x-3 z-30 mx-auto max-w-md" style="top:calc(max(10px, env(safe-area-inset-top)) + 96px)">
@@ -1031,6 +1039,50 @@ function renderCompass() {
   $('compassDir').textContent = (COMPASS_DIRS[LANG] || COMPASS_DIRS.en)[Math.round(b / 45) % 8];
 }
 map.on('rotate', renderCompass);
+
+/* Geräte-Kompass: im Stand (oder langsam) zeigt der Pfeil dorthin, wohin das Handy zeigt */
+S.devHdg = null; S.devHdgAt = 0;
+let devHdgApplied = null, devHdgLast = 0;
+function onDeviceHeading(h) {
+  if (h == null || isNaN(h)) return;
+  const so = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+  h = ((h + so) % 360 + 360) % 360;
+  // weich nachführen (kürzester Winkelweg), damit der Pfeil nicht zittert
+  if (S.devHdg == null) S.devHdg = h;
+  else S.devHdg = (S.devHdg + ((((h - S.devHdg) % 360) + 540) % 360 - 180) * .25 + 360) % 360;
+  S.devHdgAt = Date.now();
+  if (!S.pos || !puckAdded || S.speed >= 6) return;
+  const now = performance.now();
+  if (now - devHdgLast < 80) return;
+  if (devHdgApplied != null && Math.abs(((S.devHdg - devHdgApplied + 540) % 360) - 180) < 2) return;
+  devHdgLast = now; devHdgApplied = S.devHdg;
+  cancelAnimationFrame(puckAnim);
+  S.heading = S.devHdg;
+  puck.setLngLat([S.pos.lng, S.pos.lat]).setRotation(S.devHdg);
+  puckState = { lat: S.pos.lat, lng: S.pos.lng, hdg: S.devHdg };
+  // während der Fahrt (Fahrtrichtung oben) dreht sich die Karte mit
+  if (S.follow && !S.viewTrip && (S.mode === 'nav' || S.mode === 'free') && !map.isMoving())
+    map.easeTo({ bearing: S.devHdg, duration: 250, easing: t => t, essential: true });
+}
+const devHdgFresh = () => S.devHdg != null && Date.now() - S.devHdgAt < 3000;
+let orientOn = false, orientAsked = false;
+function startDeviceHeading() {
+  if (orientOn || orientAsked) return;
+  orientAsked = true;
+  const listen = () => {
+    if (orientOn) return;
+    orientOn = true;
+    // Android/Chrome liefert absolute Werte über „deviceorientationabsolute“, iOS über webkitCompassHeading
+    window.addEventListener('deviceorientationabsolute', e => { if (e.absolute && e.alpha != null) onDeviceHeading(360 - e.alpha); });
+    window.addEventListener('deviceorientation', e => { if (e.webkitCompassHeading != null) onDeviceHeading(e.webkitCompassHeading); });
+  };
+  const D = window.DeviceOrientationEvent;
+  if (D && typeof D.requestPermission === 'function') D.requestPermission().then(r => { if (r === 'granted') listen(); }).catch(() => {});
+  else if (D) listen();
+}
+// iOS erlaubt den Kompass nur nach einer Berührung – deshalb beim ersten Tippen anfragen
+document.addEventListener('touchend', startDeviceHeading);
+document.addEventListener('click', startDeviceHeading);
 map.on('zoomstart', e => { if (e.originalEvent && (S.mode === 'nav' || S.mode === 'free')) unfollow(e); });
 
 function fitCoords(coords) {
@@ -1896,6 +1948,8 @@ function onFix(f) {
     const sn = updateNav(f);
     if (sn && sn.dist < 25) hdg = sn.bearing;
   }
+  // Im Stand gibt GPS keine Richtung her – dann zählt der Geräte-Kompass
+  if (kmh < 6 && devHdgFresh()) hdg = S.devHdg;
   S.heading = hdg;
 
   movePuck(f.lat, f.lng, hdg);
@@ -2422,6 +2476,36 @@ function startFree() {
   requestWakeLock();
   speak(L('Freie Fahrt. Blitzerwarner ist aktiv.'));
   camera();
+  S.freeBannerTimer = setTimeout(flyBannerIntoCar, 3500);
+}
+
+// Freie Fahrt: Hinweis-Banner nur kurz zeigen, dann in das Fahrzeug hineinfliegen lassen
+function flyBannerIntoCar() {
+  if (S.mode !== 'free') return;
+  const top = $('navTop'), card = top.firstElementChild;
+  const a = card.getBoundingClientRect(), b = puckEl.getBoundingClientRect();
+  // Ohne GPS-Puck auf der Karte: dorthin fliegen, wo das Fahrzeug während der Fahrt sitzt
+  const bx = puckAdded && b.width ? b.left + b.width / 2 : innerWidth / 2;
+  const by = puckAdded && b.width ? b.top + b.height / 2 : innerHeight * .7;
+  top.style.setProperty('--fx', `${Math.round(bx - (a.left + a.width / 2))}px`);
+  top.style.setProperty('--fy', `${Math.round(by - (a.top + a.height / 2))}px`);
+  // Kompass bleibt sichtbar – er wandert in die obere rechte Ecke
+  S.compassHome = $('compass').parentNode;
+  $('compassFloat').appendChild($('compass'));
+  $('compassFloat').classList.remove('hidden');
+  top.classList.add('fly-in');
+  setTimeout(() => {
+    if (S.mode !== 'free' || !top.classList.contains('fly-in')) return;
+    top.classList.add('hidden');
+    puckEl.classList.remove('gulp'); void puckEl.offsetWidth; puckEl.classList.add('gulp');
+    vibrate(30);
+  }, 850);
+}
+function resetFreeBanner() {
+  clearTimeout(S.freeBannerTimer);
+  $('navTop').classList.remove('fly-in');
+  if (S.compassHome && $('compass').parentNode !== S.compassHome) S.compassHome.appendChild($('compass'));
+  $('compassFloat').classList.add('hidden');
 }
 
 function endDrive(reason) {
@@ -2942,6 +3026,7 @@ function setMode(m) {
   S.mode = m;
   const driving = m === 'nav' || m === 'free';
   document.body.classList.toggle('driving', driving);
+  resetFreeBanner();
   $('topBar').classList.toggle('hidden', driving);
   $('navTop').classList.toggle('hidden', !driving);
   $('browseSheet').classList.toggle('hidden', m !== 'browse');
