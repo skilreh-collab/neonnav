@@ -5,11 +5,25 @@
 /* =================================================================
    UI-MODI & LAYOUT
    ================================================================= */
-function sheetHeight() { const el = [...document.querySelectorAll('.sheet')].find(e => !e.classList.contains('hidden')); return el ? el.offsetHeight : 0; }
+const visibleSheet = () => [...document.querySelectorAll('.sheet')].find(e => !e.classList.contains('hidden'));
+function sheetHeight() { const el = visibleSheet(); return el ? el.offsetHeight : 0; }
+// Höhe des Feldes in der kleinen Stufe – daran hängen Tacho und Seitenleiste, damit sie beim
+// Ziehen oder Aufklappen eines Feldes stehen bleiben (das große Feld schiebt sich darüber)
+function baseSheetHeight() {
+  const el = visibleSheet();
+  if (!el) return 0;
+  const panel = el.firstElementChild, pad = el.offsetHeight - panel.offsetHeight;
+  // Start-Feld: der aufklappbare Teil wird einfach abgezogen (Messen würde seine Animation stören)
+  if (el.id === 'browseSheet') return pad + panel.offsetHeight - $('sheetMore').offsetHeight;
+  return pad + (isCompact(el) ? panel.offsetHeight : measureSheet(el, true));
+}
 function layout() {
-  const h = sheetHeight();
-  $('rail').style.bottom = `${h + 12}px`;
-  $('gauge').style.bottom = `${h + 12}px`;
+  const el = visibleSheet();
+  // während das Feld gezogen wird oder einrastet, bleibt alles andere, wo es ist
+  if (el && (el.classList.contains('dragging') || el.firstElementChild.classList.contains('sheet-panel-anim'))) return;
+  const h = sheetHeight(), base = baseSheetHeight();
+  $('rail').style.bottom = `${base + 12}px`;
+  $('gauge').style.bottom = `${base + 12}px`;
   document.documentElement.style.setProperty('--sheet-h', `${h + (S.mode === 'preview' ? 10 : 130)}px`);
 }
 function setMode(m) {
@@ -146,7 +160,6 @@ function initSheetDrag(el) {
     drag.v = (e.clientY - drag.lastY) / Math.max(1, now - drag.lastT) * .6 + drag.v * .4;
     drag.lastY = e.clientY; drag.lastT = now; drag.h = h;
     panel.style.height = `${h}px`;
-    layout();
   });
   const end = e => {
     if (!start || (e && e.pointerId !== start.id)) return;
@@ -172,8 +185,6 @@ function initSheetDrag(el) {
     const once = () => { if (!done) { done = true; finish(); } };
     panel.addEventListener('transitionend', once, { once: true });
     setTimeout(once, 400);
-    const tick = () => { layout(); if (!done) requestAnimationFrame(tick); };
-    requestAnimationFrame(tick);
   };
   panel.addEventListener('pointerup', end);
   panel.addEventListener('pointercancel', end);

@@ -133,3 +133,6 @@ html[data-theme=day] .maplibregl-ctrl-attrib-button { filter:none; }
 #rail.open .rail-toggle svg { transform:rotate(45deg) scale(.9); }
 .rail-recenter { position:absolute; right:62px; bottom:0; }
 .rail-recenter:not(.active-ring) { display:none; }
+
+/* Felder liegen über Tacho und Seitenleiste, wenn sie großgezogen werden */
+#browseSheet, #previewSheet, #driveSheet { z-index:25; }
