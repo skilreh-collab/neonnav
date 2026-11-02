@@ -73,7 +73,8 @@ function drawPreview(fit) {
 
   $('routeCards').innerHTML = S.routes.map((r, i) => {
     const on = i === S.routeIdx, hz = r.routeHaz.length, c = costFor(r.total, (r.total / 1000) / (r.duration / 3600), tripVehicle());
-    return `<button data-idx="${i}" class="route-card w-full text-left rounded-2xl p-3 border ${on ? 'border-cyan-300 bg-cyan-400/10' : 'border-slate-700 bg-black/30'}">
+    // im kleinen Feld bleibt nur die gewählte Route sichtbar
+    return `<button data-idx="${i}" ${on ? '' : 'data-extra'} class="route-card w-full text-left rounded-2xl p-3 border ${on ? 'border-cyan-300 bg-cyan-400/10' : 'border-slate-700 bg-black/30'}">
       <div class="flex justify-between items-baseline gap-2">
         <span class="font-game text-2xl font-black ${on ? 'neon-text' : 'text-slate-200'}">${fmtDur(r.duration)}</span>
         <span class="text-slate-300 font-semibold">${(r.total / 1000).toFixed(1).replace('.', DEC)} km</span>

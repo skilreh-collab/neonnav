@@ -13,7 +13,7 @@ const LS = {
   cams: 'neonnav.osmcams.v1', osm: 'neonnav.osm.v1', install: 'neonnav.installhint.v1',
   theme: 'neonnav.theme.v1', voice: 'neonnav.voice.v1', pois: 'neonnav.pois.v1',
   favs: 'neonnav.favs.v1', park: 'neonnav.park.v1', ach: 'neonnav.ach.v1', stats: 'neonnav.stats.v1',
-  explore: 'neonnav.explore.v1', ghosts: 'neonnav.ghosts.v1', lang: 'neonnav.lang.v1'
+  explore: 'neonnav.explore.v1', ghosts: 'neonnav.ghosts.v1', lang: 'neonnav.lang.v1', sheets: 'neonnav.sheets.v1'
 };
 // KI-Beifahrer wurde entfernt – gespeicherten Gemini-Schlüssel vom Gerät löschen
 try { localStorage.removeItem('neonnav.gemini.v1'); localStorage.removeItem('neonnav.geminimodel.v1'); } catch (e) {}

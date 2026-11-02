@@ -460,6 +460,7 @@ window.NN_I18N = {
     "Kein Netz – neuer Versuch…": ["No signal – retrying…", "Sin señal – reintentando…", "Pas de réseau – nouvel essai…", "Nessun segnale – nuovo tentativo…", "Sinyal yok – yeniden deneniyor…"],
     "Neue Route gefunden": ["New route found", "Nueva ruta encontrada", "Nouvel itinéraire trouvé", "Nuovo percorso trovato", "Yeni rota bulundu"],
     "Neuberechnung fehlgeschlagen – ich versuche es weiter": ["Rerouting failed – I'll keep trying", "Error al recalcular – sigo intentándolo", "Échec du recalcul – je réessaie", "Ricalcolo non riuscito – continuo a provare", "Yeniden hesaplama başarısız – denemeye devam ediyorum"],
+    "Werkzeuge": ["Tools", "Herramientas", "Outils", "Strumenti", "Araçlar"],
     // --- Start & Ziel ---
     "📍 Mein Standort": ["📍 My location", "📍 Mi ubicación", "📍 Ma position", "📍 La mia posizione", "📍 Konumum"],
     "Mein Standort": ["My location", "Mi ubicación", "Ma position", "La mia posizione", "Konumum"],

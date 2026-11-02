@@ -148,17 +148,25 @@
 </div>
 
 <!-- ===================== Seitenleiste ===================== -->
-<div id="rail" class="fixed right-3 z-20 flex flex-col gap-2">
-  <button id="muteBtn" class="rail-btn" aria-label="Ton">🔊</button>
-  <button id="viewBtn" class="rail-btn font-game text-sm font-black neon-text" aria-label="Ansicht">3D</button>
-  <button id="recenterBtn" class="rail-btn text-cyan-300" aria-label="Zentrieren">◎</button>
-  <button id="reportCamBtn" class="rail-btn" style="background:linear-gradient(135deg,#ff1744,#a3002a);border-color:#ff8a9a" aria-label="Blitzer melden">📸</button>
-  <button id="reportHazBtn" class="rail-btn" style="background:linear-gradient(135deg,#ffab00,#c25e00);border-color:#ffd27a" aria-label="Gefahr melden">⚠️</button>
+<!-- Alle Knöpfe stecken in einem: antippen oder hochwischen fächert sie auf, runterwischen sammelt sie wieder ein -->
+<div id="rail" class="fixed right-3 z-20 flex flex-col items-end gap-2">
+  <div id="railItems" class="rail-items">
+    <button id="muteBtn" class="rail-btn" aria-label="Ton">🔊</button>
+    <button id="viewBtn" class="rail-btn font-game text-sm font-black neon-text" aria-label="Ansicht">3D</button>
+    <button id="reportCamBtn" class="rail-btn" style="background:linear-gradient(135deg,#ff1744,#a3002a);border-color:#ff8a9a" aria-label="Blitzer melden">📸</button>
+    <button id="reportHazBtn" class="rail-btn" style="background:linear-gradient(135deg,#ffab00,#c25e00);border-color:#ffd27a" aria-label="Gefahr melden">⚠️</button>
+  </div>
+  <!-- Zentrieren erscheint neben dem Knopf, sobald die Karte nicht mehr mitfährt -->
+  <button id="recenterBtn" class="rail-btn rail-recenter text-cyan-300" aria-label="Zentrieren">◎</button>
+  <button id="railToggle" class="rail-btn rail-toggle" aria-label="Werkzeuge" aria-expanded="false">
+    <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><circle cx="7" cy="7" r="2.3"/><circle cx="17" cy="7" r="2.3"/><circle cx="7" cy="17" r="2.3"/><circle cx="17" cy="17" r="2.3"/></svg>
+  </button>
 </div>
 
 <!-- ===================== Sheet: Start ===================== -->
 <div id="browseSheet" class="sheet fixed bottom-0 inset-x-0 z-20 safe-bottom px-3">
-  <div class="mx-auto max-w-md panel rounded-3xl p-2">
+  <div class="mx-auto max-w-md panel rounded-3xl p-2 pt-1">
+    <div class="grabber" aria-hidden="true"></div>
     <div class="flex items-center gap-2">
       <button id="searchOpen" class="flex-1 min-w-0 h-11 rounded-2xl bg-black/40 border border-cyan-400/30 flex items-center gap-2 px-3 text-left text-slate-400 text-base">
         <span class="text-lg">🔍</span><span class="truncate">Wohin geht's?</span>
@@ -184,7 +192,8 @@
 
 <!-- ===================== Sheet: Routenvorschau ===================== -->
 <div id="previewSheet" class="sheet hidden fixed bottom-0 inset-x-0 z-20 safe-bottom px-3">
-  <div class="mx-auto max-w-md panel rounded-3xl p-4">
+  <div class="mx-auto max-w-md panel rounded-3xl p-4 pt-1">
+    <div class="grabber" aria-hidden="true"></div>
     <div class="flex justify-between items-start gap-2">
       <div class="min-w-0">
         <div class="text-[10px] uppercase tracking-[.25em] text-slate-400 font-game">Ziel</div>
@@ -199,7 +208,7 @@
       </div>
     </div>
     <div id="routeCards" class="mt-3 space-y-2"></div>
-    <div id="routeExtras" class="hidden mt-2 space-y-1.5"></div>
+    <div id="routeExtras" data-extra class="hidden mt-2 space-y-1.5"></div>
     <button id="goBtn" class="mt-3 w-full h-16 rounded-2xl font-game font-black text-2xl text-black glow-btn"
             style="background:linear-gradient(90deg,var(--neon),#7cf8ff)">LOS ▶</button>
   </div>
@@ -207,7 +216,8 @@
 
 <!-- ===================== Sheet: Fahrt ===================== -->
 <div id="driveSheet" class="sheet hidden fixed bottom-0 inset-x-0 z-20 safe-bottom px-3">
-  <div id="driveCard" class="mx-auto max-w-md panel rounded-3xl p-3">
+  <div id="driveCard" class="mx-auto max-w-md panel rounded-3xl p-3 pt-1">
+    <div class="grabber" aria-hidden="true"></div>
     <div id="ghostLine" class="hidden mb-2 text-sm font-bold px-1"></div>
     <div id="hazNext" class="hidden mb-2 text-sm font-semibold text-red-300 px-1"></div>
     <div class="flex items-center gap-3">
@@ -218,7 +228,8 @@
       </div>
       <button id="endBtn" class="shrink-0 h-12 px-4 rounded-2xl bg-red-600 font-game font-bold text-sm tracking-wider active:scale-95 transition">ENDE</button>
     </div>
-    <div id="costLine" class="mt-2 px-1 flex justify-between gap-2 text-sm font-semibold text-slate-200"></div>
+    <div id="costLine" data-extra class="mt-2 px-1 flex justify-between gap-2 text-sm font-semibold text-slate-200"></div>
+    <div id="driveDest" data-extra class="mt-1.5 px-1 text-sm font-bold text-cyan-100 truncate"></div>
   </div>
 </div>
 

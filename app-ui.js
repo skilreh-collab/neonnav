@@ -28,6 +28,8 @@ function setMode(m) {
   if (!driving) { $('hazNext').classList.add('hidden'); hideAlarm(); S.limit = null; renderLimit(false); }
   if (m === 'browse') renderFavChips(); else setSheetOpen(false);
   if (m === 'free') { $('d1l').textContent = L('Zeit'); $('d2l').textContent = 'km'; $('d3l').textContent = 'Ø km/h'; }
+  if (driving) $('driveDest').textContent = m === 'nav' && S.dest ? `🏁 ${S.dest.name}` : `🛣️ ${L('Freie Fahrt')}`;
+  setRailOpen(false);
   layout();
   if (S.pos) checkHazards();
 }
@@ -83,8 +85,137 @@ function setSheetOpen(on) {
 }
 $('searchOpen').onclick = () => { if (sheetOpen) openSearch(); else setSheetOpen(true); };
 $('sheetToggle').onclick = () => setSheetOpen(!sheetOpen);
-map.on('click', () => { if (sheetOpen) setSheetOpen(false); });
-map.on('dragstart', () => { if (sheetOpen) setSheetOpen(false); });
+map.on('click', () => { if (sheetOpen) setSheetOpen(false); setRailOpen(false); });
+map.on('dragstart', () => { if (sheetOpen) setSheetOpen(false); setRailOpen(false); });
+
+/* --- Ziehbare Felder: Höhe folgt dem Finger, rastet bei „klein“ oder „groß“ ein --- */
+// Start-Feld: klein = nur Suche, groß = Favoriten & Co. (bestehendes sheetMore).
+// Vorschau & Fahrt: klein blendet alles mit data-extra aus; die Wahl wird gemerkt.
+const SHEET_KEY = { previewSheet: 'preview', driveSheet: 'drive' };
+const sheetPref = Object.assign({ preview: false, drive: false }, store.get(LS.sheets, {}));
+Object.entries(SHEET_KEY).forEach(([id, k]) => $(id).classList.toggle('compact', !!sheetPref[k]));
+
+const sheetPanel = el => el.firstElementChild;
+const isCompact = el => el.id === 'browseSheet' ? !sheetOpen : el.classList.contains('compact');
+function setCompact(el, on) {
+  if (el.id === 'browseSheet') { setSheetOpen(!on); return; }
+  el.classList.toggle('compact', on);
+  sheetPref[SHEET_KEY[el.id]] = on;
+  store.set(LS.sheets, sheetPref);
+  layout();
+}
+// Höhe des Feldes im Zustand klein/groß messen, ohne dass etwas sichtbar umspringt
+function measureSheet(el, compact) {
+  const panel = sheetPanel(el), keepH = panel.style.height, was = isCompact(el);
+  el.classList.add('measuring');
+  panel.style.height = '';
+  if (el.id === 'browseSheet') $('sheetMore').classList.toggle('open', !compact); else el.classList.toggle('compact', compact);
+  const h = panel.offsetHeight;
+  if (el.id === 'browseSheet') $('sheetMore').classList.toggle('open', !was); else el.classList.toggle('compact', was);
+  panel.style.height = keepH;
+  void panel.offsetHeight;
+  el.classList.remove('measuring');
+  return h;
+}
+function initSheetDrag(el) {
+  const panel = sheetPanel(el);
+  let start = null, drag = null, swallowClick = false;
+  panel.addEventListener('pointerdown', e => {
+    if (e.button > 0) return;
+    start = { x: e.clientX, y: e.clientY, id: e.pointerId };
+  });
+  panel.addEventListener('pointermove', e => {
+    if (!start || e.pointerId !== start.id) return;
+    const dx = e.clientX - start.x, dy = e.clientY - start.y;
+    if (!drag) {
+      if (Math.abs(dy) < 8 || Math.abs(dy) < Math.abs(dx)) return;
+      // Ziehen beginnt: beide Höhen messen, Inhalt voll zeigen und per Höhe beschneiden
+      const hMin = measureSheet(el, true), hMax = measureSheet(el, false), h0 = panel.offsetHeight;
+      drag = { hMin, hMax, h0, h: h0, lastY: e.clientY, lastT: performance.now(), v: 0 };
+      el.classList.add('dragging');
+      if (el.id === 'browseSheet') $('sheetMore').classList.add('open'); else el.classList.remove('compact');
+      panel.style.overflow = 'hidden';
+      panel.style.height = `${h0}px`;
+      try { panel.setPointerCapture(e.pointerId); } catch (x) {}
+    }
+    let h = drag.h0 - dy;
+    // über die Grenzen hinaus nur noch gedämpft (Gummiband)
+    if (h > drag.hMax) h = drag.hMax + (h - drag.hMax) * .25;
+    if (h < drag.hMin) h = drag.hMin - (drag.hMin - h) * .25;
+    const now = performance.now();
+    drag.v = (e.clientY - drag.lastY) / Math.max(1, now - drag.lastT) * .6 + drag.v * .4;
+    drag.lastY = e.clientY; drag.lastT = now; drag.h = h;
+    panel.style.height = `${h}px`;
+    layout();
+  });
+  const end = e => {
+    if (!start || (e && e.pointerId !== start.id)) return;
+    start = null;
+    if (!drag) return;
+    const d = drag; drag = null;
+    swallowClick = true; setTimeout(() => { swallowClick = false; }, 350);
+    // Schwung entscheidet, sonst die nähere Raststufe
+    const compact = d.v > .35 ? true : d.v < -.35 ? false : d.h < (d.hMin + d.hMax) / 2;
+    el.classList.remove('dragging');
+    panel.classList.add('sheet-panel-anim');
+    panel.style.height = `${compact ? d.hMin : d.hMax}px`;
+    const finish = () => {
+      panel.classList.remove('sheet-panel-anim');
+      el.classList.add('measuring');
+      setCompact(el, compact);
+      panel.style.height = ''; panel.style.overflow = '';
+      void panel.offsetHeight;
+      el.classList.remove('measuring');
+      layout();
+    };
+    let done = false;
+    const once = () => { if (!done) { done = true; finish(); } };
+    panel.addEventListener('transitionend', once, { once: true });
+    setTimeout(once, 400);
+    const tick = () => { layout(); if (!done) requestAnimationFrame(tick); };
+    requestAnimationFrame(tick);
+  };
+  panel.addEventListener('pointerup', end);
+  panel.addEventListener('pointercancel', end);
+  // Nach dem Ziehen keinen Knopf unter dem Finger auslösen
+  panel.addEventListener('click', e => { if (swallowClick) { e.stopPropagation(); e.preventDefault(); } }, true);
+  // Griff antippen schaltet zwischen klein und groß
+  panel.querySelector('.grabber').addEventListener('click', () => setCompact(el, !isCompact(el)));
+}
+['browseSheet', 'previewSheet', 'driveSheet'].forEach(id => initSheetDrag($(id)));
+
+/* --- Seitenleiste: alle Knöpfe in einem --- */
+let railOpen = false, railTimer = 0, railSwiped = false;
+function railAutoClose(ms) { clearTimeout(railTimer); railTimer = setTimeout(() => setRailOpen(false), ms); }
+function setRailOpen(on) {
+  railOpen = on;
+  // Reihenfolge von unten zählen, damit jeder Knopf aus dem Sammelknopf herausfährt
+  const items = [...$('railItems').children].filter(b => !b.classList.contains('hidden'));
+  items.forEach((b, i) => b.style.setProperty('--i', items.length - i));
+  $('rail').classList.toggle('open', on);
+  $('railToggle').setAttribute('aria-expanded', String(on));
+  clearTimeout(railTimer);
+  if (on) railAutoClose(6000);
+}
+$('railToggle').onclick = () => { if (railSwiped) { railSwiped = false; return; } setRailOpen(!railOpen); };
+$('railItems').addEventListener('click', () => { if (railOpen) railAutoClose(4000); });
+// Wischen: hoch/links öffnet, runter/rechts schließt
+let railStart = null;
+$('rail').addEventListener('pointerdown', e => {
+  railStart = { x: e.clientX, y: e.clientY };
+  // Finger am Knopf festhalten, auch wenn er beim Wischen darüber hinausgleitet
+  const b = e.target.closest('.rail-btn');
+  if (b) { try { b.setPointerCapture(e.pointerId); } catch (x) {} }
+});
+$('rail').addEventListener('pointerup', e => {
+  if (!railStart) return;
+  const dx = e.clientX - railStart.x, dy = e.clientY - railStart.y;
+  railStart = null;
+  if (Math.max(Math.abs(dx), Math.abs(dy)) < 30) return;
+  const open = Math.abs(dy) >= Math.abs(dx) ? dy < 0 : dx < 0;
+  railSwiped = true; setTimeout(() => { railSwiped = false; }, 350);
+  setRailOpen(open);
+});
 $('searchClose').onclick = () => { closeSearch(); if (S.mode !== 'preview') S.start = null; };
 // Start- und Zielfeld teilen sich die Trefferliste; das zuletzt fokussierte Feld bekommt den gewählten Ort
 ['startInput', 'searchInput'].forEach(id => {

@@ -111,3 +111,25 @@ html[data-theme=day] .maplibregl-ctrl-attrib-button { filter:none; }
 
 /* Toast */
 #toast { transition:opacity .3s, transform .3s; }
+
+/* Ziehbare Felder unten (wie bei Apple): Griff oben, Höhe folgt dem Finger und rastet groß/klein ein */
+.sheet > .panel, .sheet > div > .panel { touch-action:none; }
+.sheet .overflow-x-auto { touch-action:pan-x; }
+.grabber { width:40px; height:5px; border-radius:3px; background:rgba(148,163,184,.55); margin:4px auto 8px; cursor:grab; }
+.grabber::before { content:''; display:block; height:22px; margin:-9px -30px 0; } /* größere Trefferfläche */
+.sheet.compact [data-extra] { display:none !important; }
+.sheet.dragging *, .sheet.measuring * { transition:none !important; }
+.sheet-panel-anim { transition:height .32s cubic-bezier(.2,.9,.25,1) !important; }
+
+/* Seitenleiste: Knöpfe fächern aus dem Sammelknopf auf und fliegen wieder hinein */
+#rail { pointer-events:none; }
+#rail .rail-btn { pointer-events:auto; }
+.rail-items { display:flex; flex-direction:column; gap:8px; }
+.rail-items > .rail-btn { transition:transform .34s cubic-bezier(.2,.9,.3,1.15), opacity .22s ease; transition-delay:calc((var(--i, 1) - 1) * 28ms); }
+#rail:not(.open) .rail-items > .rail-btn { transform:translateY(calc(var(--i, 1) * 62px)) scale(.3); opacity:0; pointer-events:none; transition-delay:0s; }
+.rail-toggle { color:#a5f3fc; position:relative; z-index:1; }
+.rail-toggle svg { transition:transform .3s ease; }
+#rail.open .rail-toggle { border-color:var(--neon); box-shadow:0 0 18px rgba(0,229,255,.55); }
+#rail.open .rail-toggle svg { transform:rotate(45deg) scale(.9); }
+.rail-recenter { position:absolute; right:62px; bottom:0; }
+.rail-recenter:not(.active-ring) { display:none; }
