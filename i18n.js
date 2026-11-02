@@ -455,6 +455,11 @@ window.NN_I18N = {
     "Fest installierte Blitzer aus OpenStreetMap": ["Fixed speed cameras from OpenStreetMap", "Radares fijos de OpenStreetMap", "Radars fixes issus d'OpenStreetMap", "Autovelox fissi da OpenStreetMap", "OpenStreetMap'teki sabit radarlar"],
     "⭐ MERKEN": ["⭐ SAVE", "⭐ GUARDAR", "⭐ ENREGISTRER", "⭐ SALVA", "⭐ KAYDET"],
     "🗑 Aus Favoriten entfernen": ["🗑 Remove from favourites", "🗑 Quitar de favoritos", "🗑 Retirer des favoris", "🗑 Rimuovi dai preferiti", "🗑 Favorilerden kaldır"],
+    // --- Neuberechnung ohne Netz ---
+    "Zeitüberschreitung": ["Timed out", "Tiempo agotado", "Délai dépassé", "Tempo scaduto", "Zaman aşımı"],
+    "Kein Netz – neuer Versuch…": ["No signal – retrying…", "Sin señal – reintentando…", "Pas de réseau – nouvel essai…", "Nessun segnale – nuovo tentativo…", "Sinyal yok – yeniden deneniyor…"],
+    "Neue Route gefunden": ["New route found", "Nueva ruta encontrada", "Nouvel itinéraire trouvé", "Nuovo percorso trovato", "Yeni rota bulundu"],
+    "Neuberechnung fehlgeschlagen – ich versuche es weiter": ["Rerouting failed – I'll keep trying", "Error al recalcular – sigo intentándolo", "Échec du recalcul – je réessaie", "Ricalcolo non riuscito – continuo a provare", "Yeniden hesaplama başarısız – denemeye devam ediyorum"],
     // --- Start & Ziel ---
     "📍 Mein Standort": ["📍 My location", "📍 Mi ubicación", "📍 Ma position", "📍 La mia posizione", "📍 Konumum"],
     "Mein Standort": ["My location", "Mi ubicación", "Ma position", "La mia posizione", "Konumum"],

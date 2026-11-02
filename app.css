@@ -1,0 +1,113 @@
+/* NeonNav – eigene Stile (Tailwind-Klassen kommen aus tailwind.css) */
+:root { --neon:#00e5ff; --pink:#ff2bd6; --lime:#a3ff12; --bg:#05060f; --panel:rgba(9,11,28,.88); --sheet-h:200px; }
+html, body { height:100%; margin:0; background:var(--bg); overflow:hidden; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
+body { font-family:Inter, system-ui, -apple-system, sans-serif; color:#e6f0ff; }
+.font-game { font-family:Orbitron, Inter, sans-serif; letter-spacing:.02em; }
+button { touch-action:manipulation; user-select:none; -webkit-user-select:none; }
+.hidden { display:none !important; }
+#map { position:fixed; inset:0; }
+
+.panel { background:var(--panel); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+         border:1px solid rgba(0,229,255,.18); box-shadow:0 10px 40px rgba(0,0,0,.55), inset 0 0 0 1px rgba(255,255,255,.03); }
+.neon-text { color:var(--neon); text-shadow:0 0 12px rgba(0,229,255,.75); }
+.pink-text { color:var(--pink); text-shadow:0 0 12px rgba(255,43,214,.7); }
+.glow-btn { box-shadow:0 0 24px rgba(0,229,255,.5); }
+.safe-top { padding-top:max(10px, env(safe-area-inset-top)); }
+.safe-bottom { padding-bottom:max(12px, env(safe-area-inset-bottom)); }
+/* Dialoge mittig, mit Abstand zu Notch, Home-Indikator und Rändern */
+.modal-wrap { padding:max(16px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
+/* Ausklappbarer Bereich im Startfeld (Höhe animiert über grid-template-rows) */
+.sheet-more { display:grid; grid-template-rows:0fr; opacity:0; transition:grid-template-rows .28s ease, opacity .22s ease; }
+.sheet-more > div { overflow:hidden; min-height:0; }
+.sheet-more.open { grid-template-rows:1fr; opacity:1; }
+.scroll-none::-webkit-scrollbar { display:none; }
+.scroll-none { scrollbar-width:none; }
+
+.rail-btn { width:54px; height:54px; border-radius:18px; font-size:22px; display:grid; place-items:center;
+            background:var(--panel); backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
+            border:1px solid rgba(0,229,255,.2); box-shadow:0 8px 24px rgba(0,0,0,.5); transition:transform .1s; }
+.rail-btn:active { transform:scale(.92); }
+.rail-btn.active-ring { border-color:var(--neon); box-shadow:0 0 18px rgba(0,229,255,.6); }
+
+@keyframes blink { 50% { opacity:.35; } }
+.blink { animation:blink .7s infinite; }
+@keyframes pulseRing { 0% { transform:scale(.7); opacity:.9; } 100% { transform:scale(2.3); opacity:0; } }
+
+/* Fahrzeug-Puck */
+.puck { width:48px; height:48px; }
+.puck svg { filter:drop-shadow(0 0 10px rgba(0,229,255,.95)); }
+/* Während der Fahrt nur das Fahrzeug zeigen – ohne Kreis darum */
+body.driving .puck .puck-ring { display:none; }
+body.driving .puck svg { filter:drop-shadow(0 0 5px rgba(0,229,255,.9)) drop-shadow(0 2px 3px rgba(0,0,0,.7)); }
+
+/* Fahrt-Anzeige: klare, gut lesbare Zahlen */
+.drive-num { font-family:Inter, system-ui, sans-serif; font-size:clamp(19px, 5.8vw, 24px); font-weight:800; line-height:1.1; letter-spacing:-.01em; white-space:nowrap;
+             font-variant-numeric:tabular-nums; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.9); }
+.drive-num.accent { color:#5ff2ff; }
+.drive-lbl { margin-top:2px; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#cbd5e1; }
+#manDist { font-family:Inter, system-ui, sans-serif; font-weight:900; font-variant-numeric:tabular-nums; color:#5ff2ff;
+           text-shadow:0 1px 2px rgba(0,0,0,.9); letter-spacing:-.01em; }
+
+/* Kompass im Manöver-Banner */
+.compass { position:relative; width:56px; height:56px; border-radius:50%; background:rgba(0,0,0,.5); border:1.5px solid rgba(0,229,255,.45); }
+.compass-rose { position:absolute; inset:0; transition:transform .4s linear; }
+/* Freie Fahrt: Banner fliegt nach dem Start in das Fahrzeug hinein */
+#navTop.fly-in > div { transition:transform .85s cubic-bezier(.55,0,.8,.3), opacity .85s ease-in;
+                       transform:translate(var(--fx, 0px), var(--fy, 0px)) scale(.05); opacity:0; }
+@keyframes puckGulp { 0% { transform:scale(1); } 40% { transform:scale(1.35); } 100% { transform:scale(1); } }
+.puck.gulp svg { animation:puckGulp .5s ease-out; }
+.compass-dir { position:absolute; inset:0; display:grid; place-items:center; font:900 15px Inter, system-ui, sans-serif; color:#fff; }
+
+/* Gefahren-Marker */
+.haz-mk { width:36px; height:36px; border-radius:50%; background:radial-gradient(circle,#ff1744,#a3002a); border:2px solid #fff;
+          display:grid; place-items:center; font-size:17px; position:relative; box-shadow:0 0 16px rgba(255,23,68,.9); cursor:pointer; }
+.haz-mk::before { content:''; position:absolute; inset:-2px; border-radius:50%; border:2px solid rgba(255,23,68,.85); animation:pulseRing 1.8s infinite; pointer-events:none; }
+.haz-g { background:radial-gradient(circle,#ffab00,#c25e00); box-shadow:0 0 16px rgba(255,171,0,.9); }
+.haz-g::before { border-color:rgba(255,171,0,.85); }
+.park-mk { width:34px; height:34px; border-radius:10px; display:grid; place-items:center; font:900 20px Inter, sans-serif; color:#fff; cursor:pointer;
+           background:linear-gradient(135deg,#2563eb,#1d4ed8); border:2px solid #fff; box-shadow:0 0 18px rgba(37,99,235,.9); }
+.ghost-mk { font-size:30px; filter:drop-shadow(0 0 10px rgba(167,139,250,.95)); opacity:.85; pointer-events:none; }
+.fuel-mk { padding:3px 7px; border-radius:10px; font:800 12px Orbitron, Inter, sans-serif; color:#05060f; background:#a3ff12; border:2px solid #fff;
+           box-shadow:0 0 14px rgba(163,255,18,.7); white-space:nowrap; cursor:pointer; }
+.fuel-mk.best { background:#00e5ff; box-shadow:0 0 18px rgba(0,229,255,.95); }
+.fuel-mk.meh { background:#cbd5e1; box-shadow:none; }
+#limitSign { position:absolute; top:-14px; right:-14px; width:46px; height:46px; border-radius:50%; background:#fff; border:5px solid #e11d48;
+             color:#000; font:900 17px Orbitron, Inter, sans-serif; display:grid; place-items:center; box-shadow:0 4px 14px rgba(0,0,0,.5); }
+#limitSign.over { animation:blink .6s infinite; box-shadow:0 0 22px rgba(225,29,72,.95); }
+#gauge.over #gSpeed { color:#fb7185; }
+@keyframes achIn { 0% { transform:translate(-50%,-30px) scale(.8); opacity:0; } 12% { transform:translate(-50%,0) scale(1.04); opacity:1; } 18% { transform:translate(-50%,0) scale(1); } 88% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-10px); } }
+#achPop.show { animation:achIn 4.2s ease forwards; }
+.start-mk { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font:900 16px Inter, sans-serif; color:#05060f; border:3px solid #fff;
+            background:linear-gradient(135deg,#a3ff12,#5effc4); box-shadow:0 0 18px rgba(163,255,18,.9); }
+.dest-mk { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; font-size:20px; border:3px solid #fff;
+           background:linear-gradient(135deg,#ff2bd6,#7c3aed); box-shadow:0 0 22px rgba(255,43,214,.95); }
+
+/* Alarm */
+.alarm-box { background:linear-gradient(135deg,#ff1744,#b0003a); box-shadow:0 0 40px rgba(255,23,68,.75); }
+@keyframes sheetflash { 50% { border-color:rgba(255,23,68,1); box-shadow:0 0 34px rgba(255,23,68,.6); } }
+.sheet-alarm { animation:sheetflash .7s infinite; }
+
+/* MapLibre-Anpassungen */
+.maplibregl-ctrl-bottom-left { bottom:var(--sheet-h) !important; }
+.maplibregl-ctrl-attrib { background:rgba(5,6,15,.75) !important; }
+.maplibregl-ctrl-attrib a, .maplibregl-ctrl-attrib-inner { color:#94a3b8 !important; font-size:10px; }
+.maplibregl-ctrl-attrib-button { filter:invert(1); }
+html[data-theme=day] .maplibregl-ctrl-attrib { background:rgba(255,255,255,.8) !important; }
+html[data-theme=day] .maplibregl-ctrl-attrib a, html[data-theme=day] .maplibregl-ctrl-attrib-inner { color:#475569 !important; }
+html[data-theme=day] .maplibregl-ctrl-attrib-button { filter:none; }
+.maplibregl-popup-content { background:#0b0e22; color:#e6f0ff; border:1px solid rgba(0,229,255,.35); border-radius:14px; padding:12px 14px; box-shadow:0 0 24px rgba(0,229,255,.25); }
+.maplibregl-popup-anchor-bottom .maplibregl-popup-tip { border-top-color:#0b0e22; }
+.maplibregl-popup-anchor-top .maplibregl-popup-tip { border-bottom-color:#0b0e22; }
+.maplibregl-popup-anchor-left .maplibregl-popup-tip { border-right-color:#0b0e22; }
+.maplibregl-popup-anchor-right .maplibregl-popup-tip { border-left-color:#0b0e22; }
+.maplibregl-popup-close-button { color:#94a3b8; font-size:20px; padding:2px 8px; }
+.poi-pop { padding-right:40px; overflow-wrap:anywhere; }
+.poi-pop .poi-det { line-height:1.4; }
+.poi-btn { display:flex; align-items:center; justify-content:center; gap:4px; min-height:36px; padding:6px 8px; border-radius:10px;
+           background:#1e293b; border:1px solid #334155; color:#e6f0ff; font-size:12px; font-weight:700; text-decoration:none; text-align:center;
+           white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
+.poi-btn:active { transform:scale(.97); }
+
+
+/* Toast */
+#toast { transition:opacity .3s, transform .3s; }
