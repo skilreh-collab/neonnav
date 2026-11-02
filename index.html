@@ -63,10 +63,10 @@
     body.driving .puck svg { filter:drop-shadow(0 0 5px rgba(0,229,255,.9)) drop-shadow(0 2px 3px rgba(0,0,0,.7)); }
 
     /* Fahrt-Anzeige: klare, gut lesbare Zahlen */
-    .drive-num { font-family:Inter, system-ui, sans-serif; font-size:30px; font-weight:900; line-height:1.05; letter-spacing:-.01em;
+    .drive-num { font-family:Inter, system-ui, sans-serif; font-size:clamp(19px, 5.8vw, 24px); font-weight:800; line-height:1.1; letter-spacing:-.01em; white-space:nowrap;
                  font-variant-numeric:tabular-nums; color:#fff; text-shadow:0 1px 2px rgba(0,0,0,.9); }
     .drive-num.accent { color:#5ff2ff; }
-    .drive-lbl { margin-top:2px; font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; color:#cbd5e1; }
+    .drive-lbl { margin-top:2px; font-size:11px; font-weight:800; letter-spacing:.08em; text-transform:uppercase; color:#cbd5e1; }
     #manDist { font-family:Inter, system-ui, sans-serif; font-weight:900; font-variant-numeric:tabular-nums; color:#5ff2ff;
                text-shadow:0 1px 2px rgba(0,0,0,.9); letter-spacing:-.01em; }
 
@@ -123,22 +123,6 @@
                white-space:normal; overflow-wrap:anywhere; line-height:1.25; }
     .poi-btn:active { transform:scale(.97); }
 
-    /* KI-Beifahrer */
-    .ai-msg { max-width:88%; padding:10px 12px; border-radius:18px; font-size:14px; line-height:1.45; overflow-wrap:anywhere; }
-    .ai-user { margin-left:auto; background:linear-gradient(135deg,#4f46e5,#7c3aed); border-bottom-right-radius:6px; }
-    .ai-bot { background:#151a33; border:1px solid rgba(167,139,250,.25); border-bottom-left-radius:6px; }
-    .ai-bot ul { margin:4px 0 0; padding-left:18px; list-style:disc; }
-    .ai-bot li { margin:2px 0; }
-    .ai-place { display:inline; padding:1px 7px; border-radius:8px; background:rgba(0,229,255,.14); border:1px solid rgba(0,229,255,.45);
-                color:#a5f3fc; font-weight:700; }
-    .ai-src { display:block; margin-top:8px; padding-top:6px; border-top:1px solid rgba(148,163,184,.2); font-size:11px; color:#94a3b8; }
-    .ai-src a { color:#a5f3fc; text-decoration:underline; }
-    @keyframes micPulse { 0% { box-shadow:0 0 0 0 rgba(236,72,153,.7); } 100% { box-shadow:0 0 0 14px rgba(236,72,153,0); } }
-    #aiMic.listening { background:linear-gradient(135deg,#ec4899,#ef4444); border-color:#fda4af; animation:micPulse 1.1s infinite; }
-    .ai-chip { flex-shrink:0; height:36px; padding:0 12px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap;
-               background:#151a33; border:1px solid rgba(167,139,250,.35); color:#e9d5ff; }
-    @keyframes aiDots { 0%, 80%, 100% { opacity:.25; } 40% { opacity:1; } }
-    .ai-dots span { animation:aiDots 1.2s infinite; } .ai-dots span:nth-child(2) { animation-delay:.2s; } .ai-dots span:nth-child(3) { animation-delay:.4s; }
 
     /* Toast */
     #toast { transition:opacity .3s, transform .3s; }
@@ -264,7 +248,6 @@
 
 <!-- ===================== Seitenleiste ===================== -->
 <div id="rail" class="fixed right-3 z-20 flex flex-col gap-2">
-  <button id="aiBtn" class="rail-btn" style="background:linear-gradient(135deg,#4f46e5,#a855f7 55%,#ec4899);border-color:#c4b5fd" aria-label="KI-Beifahrer">✨</button>
   <button id="muteBtn" class="rail-btn" aria-label="Ton">🔊</button>
   <button id="viewBtn" class="rail-btn font-game text-sm font-black neon-text" aria-label="Ansicht">3D</button>
   <button id="recenterBtn" class="rail-btn text-cyan-300" aria-label="Zentrieren">◎</button>
@@ -306,8 +289,10 @@
         <div class="text-[10px] uppercase tracking-[.25em] text-slate-400 font-game">Ziel</div>
         <div id="destName" class="text-xl font-extrabold truncate"></div>
         <div id="destSub" class="text-sm text-slate-400 truncate"></div>
+        <div id="destFrom" class="hidden text-xs font-semibold text-lime-300 truncate mt-0.5"></div>
       </div>
       <div class="shrink-0 flex gap-2">
+        <button id="swapBtn" class="h-10 w-10 rounded-full bg-slate-800 text-lg text-cyan-300" aria-label="Start und Ziel tauschen">⇅</button>
         <button id="favBtn" class="h-10 w-10 rounded-full bg-slate-800 text-lg" aria-label="Als Favorit speichern">☆</button>
         <button id="previewClose" class="h-10 w-10 rounded-full bg-slate-800 text-lg" aria-label="Abbrechen">✕</button>
       </div>
@@ -325,12 +310,12 @@
     <div id="ghostLine" class="hidden mb-2 text-sm font-bold px-1"></div>
     <div id="hazNext" class="hidden mb-2 text-sm font-semibold text-red-300 px-1"></div>
     <div class="flex items-center gap-3">
-      <div class="flex-1 grid grid-cols-3 text-center">
+      <div class="flex-1 min-w-0 grid grid-cols-3 gap-1 text-center">
         <div><div id="d1" class="drive-num">--:--</div><div id="d1l" class="drive-lbl">Ankunft</div></div>
         <div><div id="d2" class="drive-num accent">–</div><div id="d2l" class="drive-lbl">Min</div></div>
         <div><div id="d3" class="drive-num">–</div><div id="d3l" class="drive-lbl">km</div></div>
       </div>
-      <button id="endBtn" class="shrink-0 h-14 px-5 rounded-2xl bg-red-600 font-game font-bold text-sm tracking-wider active:scale-95 transition">ENDE</button>
+      <button id="endBtn" class="shrink-0 h-12 px-4 rounded-2xl bg-red-600 font-game font-bold text-sm tracking-wider active:scale-95 transition">ENDE</button>
     </div>
     <div id="costLine" class="mt-2 px-1 flex justify-between gap-2 text-sm font-semibold text-slate-200"></div>
   </div>
@@ -339,11 +324,21 @@
 <!-- ===================== Suche ===================== -->
 <div id="searchPanel" class="hidden fixed inset-0 z-50 safe-top" style="background:rgba(5,6,15,.97)">
   <div class="px-3 flex gap-2 items-center">
-    <input id="searchInput" type="search" autocomplete="off" autocorrect="off" enterkeyhint="search" placeholder="Adresse, Ort, Restaurant…"
-           class="flex-1 min-w-0 h-14 rounded-2xl bg-slate-900 border border-cyan-400/40 px-4 text-lg text-white outline-none focus:border-cyan-300">
-    <button id="searchClose" class="h-14 px-2 text-cyan-300 font-semibold">Abbrechen</button>
+    <div class="flex-1 min-w-0 space-y-1.5">
+      <div class="relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-lime-300 pointer-events-none">A</span>
+        <input id="startInput" type="search" autocomplete="off" autocorrect="off" enterkeyhint="search" placeholder="📍 Mein Standort"
+               class="w-full h-12 rounded-2xl bg-slate-900 border border-slate-700 pl-8 pr-4 text-base text-white outline-none focus:border-lime-300">
+      </div>
+      <div class="relative">
+        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-black text-pink-300 pointer-events-none">B</span>
+        <input id="searchInput" type="search" autocomplete="off" autocorrect="off" enterkeyhint="search" placeholder="Ziel: Adresse, Ort, Restaurant…"
+               class="w-full h-14 rounded-2xl bg-slate-900 border border-cyan-400/40 pl-8 pr-4 text-lg text-white outline-none focus:border-cyan-300">
+      </div>
+    </div>
+    <button id="searchClose" class="self-end h-14 px-2 text-cyan-300 font-semibold">Abbrechen</button>
   </div>
-  <div id="searchResults" class="mt-3 px-3 pb-6 space-y-2 overflow-y-auto" style="max-height:calc(100dvh - 100px)"></div>
+  <div id="searchResults" class="mt-3 px-3 pb-6 space-y-2 overflow-y-auto" style="max-height:calc(100dvh - 160px)"></div>
 </div>
 
 <!-- ===================== Fahrtenbuch ===================== -->
@@ -471,12 +466,6 @@
         <div id="osmInfo" class="text-[11px] text-slate-500 mt-1"></div>
       </div>
 
-      <div class="border-t border-slate-800 pt-4">
-        <div class="text-[11px] uppercase tracking-[.2em] text-slate-400 font-game mb-2">✨ KI-Beifahrer (Gemini)</div>
-        <p class="text-[11px] text-slate-400" data-i18n-html="GEMINI_KEY_HINT">Kostenlosen API-Schlüssel auf <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" class="text-cyan-300 underline">aistudio.google.com/apikey</a> erstellen und hier einfügen. Er bleibt nur auf deinem Gerät gespeichert.</p>
-        <input id="aiKey" type="password" autocomplete="off" placeholder="Gemini API-Schlüssel" class="mt-2 w-full h-11 rounded-xl bg-slate-950 border border-slate-700 px-3 text-white text-sm">
-        <p id="aiKeyInfo" class="text-[11px] text-slate-500 mt-1"></p>
-      </div>
     </div>
   </div>
 </div>
@@ -504,30 +493,6 @@
   </div>
 </div>
 
-<!-- ===================== KI-Beifahrer ===================== -->
-<div id="aiModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center modal-wrap">
-  <div class="w-full max-w-md h-full max-h-[680px] flex flex-col rounded-3xl panel pb-2" style="background:#0a0c1e">
-    <div class="flex items-center justify-between px-4 pt-4 pb-2">
-      <div>
-        <h2 class="font-game text-lg font-black" style="background:linear-gradient(90deg,#a5b4fc,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent">✨ KI-BEIFAHRER</h2>
-        <p id="aiSub" class="text-sm text-slate-400">Tipps für deine Umgebung & Fahrt</p>
-      </div>
-      <div class="flex gap-2">
-        <button id="aiReset" class="h-11 w-11 rounded-full bg-slate-800 text-lg" aria-label="Neues Gespräch">🗑️</button>
-        <button id="aiClose" class="h-11 w-11 rounded-full bg-slate-800 text-xl" aria-label="Schließen">✕</button>
-      </div>
-    </div>
-    <div id="aiLog" class="flex-1 overflow-y-auto px-3 space-y-2"></div>
-    <div id="aiChips" class="flex gap-2 overflow-x-auto scroll-none px-3 pt-2"></div>
-    <form id="aiForm" class="px-3 pt-2 flex gap-2">
-      <input id="aiInput" type="text" autocomplete="off" enterkeyhint="send" placeholder="Frag mich etwas…"
-             class="flex-1 min-w-0 h-12 rounded-2xl bg-slate-900 border border-violet-400/40 px-4 text-white outline-none focus:border-violet-300">
-      <button id="aiMic" type="button" class="hidden h-12 w-12 rounded-2xl bg-slate-800 border border-violet-400/40 text-xl" aria-label="Spracheingabe">🎙️</button>
-      <button id="aiSend" type="submit" class="h-12 w-12 rounded-2xl text-xl font-black text-white" style="background:linear-gradient(135deg,#6366f1,#ec4899)" aria-label="Senden">➤</button>
-    </form>
-  </div>
-</div>
-
 <script src="cars.js"></script>
 <script src="i18n.js"></script>
 <script>
@@ -544,10 +509,11 @@ const LS = {
   vehicle: 'neonnav.vehicle.v1', prices: 'neonnav.prices.v1', tk: 'neonnav.tkkey.v1',
   cams: 'neonnav.osmcams.v1', osm: 'neonnav.osm.v1', install: 'neonnav.installhint.v1',
   theme: 'neonnav.theme.v1', voice: 'neonnav.voice.v1', pois: 'neonnav.pois.v1',
-  ai: 'neonnav.gemini.v1', aiModel: 'neonnav.geminimodel.v1',
   favs: 'neonnav.favs.v1', park: 'neonnav.park.v1', ach: 'neonnav.ach.v1', stats: 'neonnav.stats.v1',
   explore: 'neonnav.explore.v1', ghosts: 'neonnav.ghosts.v1', lang: 'neonnav.lang.v1'
 };
+// KI-Beifahrer wurde entfernt – gespeicherten Gemini-Schlüssel vom Gerät löschen
+try { localStorage.removeItem('neonnav.gemini.v1'); localStorage.removeItem('neonnav.geminimodel.v1'); } catch (e) {}
 const ROUTERS = {
   car:  ['https://routing.openstreetmap.de/routed-car/route/v1/driving/', 'https://router.project-osrm.org/route/v1/driving/'],
   bike: ['https://routing.openstreetmap.de/routed-bike/route/v1/driving/'],
@@ -1274,8 +1240,6 @@ function openGarage() {
 function openSettings() {
   $('osmToggle').checked = osmEnabled;
   $('poiToggle').checked = poisEnabled;
-  $('aiKey').value = aiKey;
-  $('aiKeyInfo').textContent = aiKey ? L('Schlüssel gespeichert ✓') : '';
   renderCams(); renderPrefs();
   $('settingsModal').classList.remove('hidden');
 }
@@ -2332,23 +2296,27 @@ async function setDestination(place) {
   if (S.mode === 'nav' || S.mode === 'free') { toast(L('Erst die aktuelle Fahrt beenden')); return; }
   if (S.viewTrip) closeTripView();
   S.dest = place;
-  if (!place.walk) saveRecent(place);
+  if (!place.walk && !place.here) saveRecent(place);
   setDestMarker(place);
   renderFavBtn();
   $('destName').textContent = place.name;
   $('destSub').textContent = place.sub || '';
+  $('destFrom').textContent = S.start ? L('Von: {n}', { n: S.start.name }) : '';
+  $('destFrom').classList.toggle('hidden', !S.start);
   $('routeCards').innerHTML = `<div class="text-center text-slate-400 py-4 font-game text-sm blink">${L('BERECHNE ROUTE…')}</div>`;
   $('goBtn').disabled = true;
   clearFuelStations(); S.routeWx = null;
   setMode('preview');
   renderRouteExtras();
-  if (!S.pos) {
+  // Eigener Startpunkt aus der Suche, sonst die aktuelle GPS-Position
+  const from = S.start || S.pos;
+  if (!from) {
     $('routeCards').innerHTML = `<div class="text-center text-amber-300 py-3 text-sm">${L('Kein Standort – bitte GPS erlauben, dann erneut wählen.')}</div>`;
     map.easeTo({ center: [place.lng, place.lat], zoom: 14, padding: pad() });
     return;
   }
   try {
-    const routes = await fetchRoutes(S.pos, place);
+    const routes = await fetchRoutes(from, place);
     if (S.mode !== 'preview') return;
     S.routes = routes.map(prepareNav);
     S.routeIdx = 0;
@@ -2389,7 +2357,18 @@ function drawPreview(fit) {
 }
 function selectRoute(i) { if (i === S.routeIdx || !S.routes[i]) return; S.routeIdx = i; drawPreview(false); }
 
+// Start und Ziel tauschen (ohne eigenen Start: aktuelle Position wird zum Ziel)
+function swapRoute() {
+  if (!S.dest) return;
+  const here = S.pos ? { name: L('Mein Standort'), sub: '', lat: S.pos.lat, lng: S.pos.lng, here: true } : null;
+  const newDest = S.start || here;
+  if (!newDest) { toast(L('Kein Standort – bitte GPS erlauben, dann erneut wählen.')); return; }
+  S.start = S.dest.here ? null : S.dest;
+  setDestination(newDest);
+}
+
 function cancelPreview() {
+  S.start = null;
   S.dest = null; S.routes = []; S.routeWx = null;
   clearFuelStations();
   setDestMarker(null);
@@ -2450,7 +2429,7 @@ function endDrive(reason) {
   const trip = finishTrip();
   const ghostMsg = reason === 'arrived' && trip && dest && !walk ? ghostFinish(dest, trip) : '';
   ghostStop();
-  S.nav = null; S.dest = null; S.routes = [];
+  S.nav = null; S.dest = null; S.routes = []; S.start = null;
   setDestMarker(null);
   setSrc('route', emptyFC()); setSrc('alts', emptyFC());
   clearFuelStations();
@@ -2479,16 +2458,27 @@ function arrived() {
    SUCHE (Nominatim) & LETZTE ZIELE
    ================================================================= */
 let searchTimer = null, searchSeq = 0;
+let searchTarget = 'dest';   // welches Feld die Trefferliste gerade füllt: 'start' | 'dest'
 function openSearch() {
   $('searchPanel').classList.remove('hidden');
   $('searchInput').value = '';
+  $('startInput').value = S.start ? S.start.name : '';
+  searchTarget = 'dest';
   renderRecentsList();
   setTimeout(() => $('searchInput').focus(), 50);
 }
-function closeSearch() { $('searchPanel').classList.add('hidden'); $('searchInput').blur(); }
+function closeSearch() { $('searchPanel').classList.add('hidden'); $('searchInput').blur(); $('startInput').blur(); }
+function pickPlace(p) {
+  if (searchTarget !== 'start') { setDestination(p); return; }
+  S.start = p.here ? null : p;
+  $('startInput').value = S.start ? S.start.name : '';
+  searchTarget = 'dest';
+  renderRecentsList();
+  $('searchInput').focus();
+}
 
 function placeRow(p, icon) {
-  const dist = S.pos ? ` · ${fmtDist(haversine(S.pos.lat, S.pos.lng, p.lat, p.lng))}` : '';
+  const dist = S.pos && !p.here ? ` · ${fmtDist(haversine(S.pos.lat, S.pos.lng, p.lat, p.lng))}` : '';
   return `<div class="flex items-center gap-3"><span class="text-xl w-9 h-9 shrink-0 grid place-items-center rounded-xl bg-slate-800">${icon}</span>
     <div class="min-w-0"><div class="font-bold text-white truncate">${esc(p.name)}</div><div class="text-xs text-slate-400 truncate">${esc(p.sub || '')}${dist}</div></div></div>`;
 }
@@ -2500,7 +2490,7 @@ function renderPlaceList(list, icon, emptyText) {
     const b = document.createElement('button');
     b.className = 'w-full text-left rounded-2xl bg-slate-900/80 border border-slate-800 p-3 active:scale-[.98] transition';
     b.innerHTML = placeRow(p, p.icon || icon);
-    b.onclick = () => setDestination(p);
+    b.onclick = () => pickPlace(p);
     box.appendChild(b);
   });
 }
@@ -2508,7 +2498,10 @@ function renderRecentsList() {
   // Favoriten zuerst, danach die letzten Ziele (ohne Doppelte)
   const fv = favs.map(f => ({ name: f.type === 'fav' ? f.name : FAV_LABEL[f.type], sub: f.type === 'fav' ? f.sub : f.name, lat: f.lat, lng: f.lng, icon: FAV_ICON[f.type] }));
   const rec = store.get(LS.recents, []).filter(r => !favAt(r));
-  renderPlaceList(fv.concat(rec), '🕘', `${L('Tippe ein Ziel ein.')}<br><span class="text-xs">${L('Tipp: Lange auf die Karte drücken setzt ein Ziel.')}</span>`);
+  // Beim Startfeld oben „Mein Standort“ anbieten, um zurück auf GPS zu wechseln
+  const here = searchTarget === 'start' ? [{ name: L('Mein Standort'), sub: L('Aktuelle GPS-Position'), here: true, icon: '📍',
+    lat: S.pos ? S.pos.lat : 0, lng: S.pos ? S.pos.lng : 0 }] : [];
+  renderPlaceList(here.concat(fv, rec), '🕘', `${L('Tippe ein Ziel ein.')}<br><span class="text-xs">${L('Tipp: Lange auf die Karte drücken setzt ein Ziel.')}</span>`);
 }
 async function doSearch(q) {
   const seq = ++searchSeq;
@@ -2688,281 +2681,6 @@ async function onLongPress(ll) {
   div.querySelector('.lp-name').textContent = place.name;
   div.querySelector('.lp-sub').textContent = place.sub;
 }
-
-/* =================================================================
-   KI-BEIFAHRER (Google Gemini)
-   ================================================================= */
-const GEMINI = 'https://generativelanguage.googleapis.com/v1beta/';
-let aiKey = store.get(LS.ai, '');
-let aiHistory = [];          // Gesprächsverlauf: [{ role: 'user' | 'model', parts: [{ text }] }]
-let aiBusy = false;
-let aiPlaces = new Map();    // kleingeschriebener Name → POI-Feature (antippbare Orte in Antworten)
-let aiMapsOk = true;         // false, sobald das Modell Google-Maps-Grounding ablehnt
-let aiArea = null;           // { lat, lng, name } – zuletzt ermittelter Ortsname
-
-async function geminiFetch(path, opts = {}) {
-  const r = await fetch(GEMINI + path, Object.assign({}, opts, { headers: { 'Content-Type': 'application/json', 'x-goog-api-key': aiKey } }));
-  const j = await r.json().catch(() => ({}));
-  if (!r.ok) {
-    const e = new Error((j.error && j.error.message) || 'HTTP ' + r.status);
-    e.status = r.status;
-    throw e;
-  }
-  return j;
-}
-const aiKeyError = e => e.status === 401 || e.status === 403 || /API key/i.test(e.message);
-
-// Modellnamen ändern sich laufend – daher das neueste stabile Flash-Modell aus der Liste wählen und 3 Tage merken
-async function aiModel(force) {
-  const c = store.get(LS.aiModel, null);
-  if (!force && c && Date.now() - c.at < 3 * 864e5) return c.name;
-  let name = 'gemini-flash-latest';
-  try {
-    const j = await geminiFetch('models?pageSize=200');
-    const score = n => { const m = n.match(/^gemini-(\d+(?:\.\d+)?)-flash(-lite)?$/); return m ? parseFloat(m[1]) * 10 + (m[2] ? 0 : 5) : -1; };
-    const best = (j.models || [])
-      .filter(m => (m.supportedGenerationMethods || []).includes('generateContent'))
-      .map(m => m.name.replace(/^models\//, ''))
-      .filter(n => score(n) >= 0)
-      .sort((a, b) => score(b) - score(a))[0];
-    if (best) name = best;
-  } catch (e) { if (aiKeyError(e)) throw e; }
-  store.set(LS.aiModel, { name, at: Date.now() });
-  return name;
-}
-
-async function aiAreaName(p) {
-  if (aiArea && haversine(aiArea.lat, aiArea.lng, p.lat, p.lng) < 1500) return aiArea.name;
-  try {
-    const r = await fetch(`${NOMINATIM}reverse?format=jsonv2&zoom=16&accept-language=${LANG}&lat=${p.lat}&lon=${p.lng}`);
-    const j = await r.json();
-    const name = (j.display_name || '').split(',').map(s => s.trim()).slice(0, 4).join(', ');
-    aiArea = { lat: p.lat, lng: p.lng, name };
-    return name;
-  } catch (e) { return ''; }
-}
-
-// Orte aus den geladenen Kartenkacheln rund um den Standort – Gemini soll bevorzugt echte Orte von der Karte empfehlen
-function aiNearbyPois(p) {
-  const sources = (map.getStyle() && map.getStyle().sources) || {};
-  const src = Object.keys(sources).find(k => sources[k].type === 'vector');
-  if (!src) return [];
-  const seen = new Set(), list = [];
-  for (const f of map.querySourceFeatures(src, { sourceLayer: 'pois' })) {
-    const pr = f.properties, info = POI_KIND[pr.kind], name = pr['name:de'] || pr.name;
-    if (!info || !name || f.geometry.type !== 'Point') continue;
-    const key = name.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    const [lng, lat] = f.geometry.coordinates;
-    list.push({ f, name, info, d: haversine(p.lat, p.lng, lat, lng) });
-  }
-  list.sort((a, b) => a.d - b.d);
-  const top = list.slice(0, 50);
-  aiPlaces = new Map(top.map(x => [x.name.toLowerCase(), x.f]));
-  return top;
-}
-
-async function aiSystemPrompt() {
-  const p = S.pos || (() => { const c = map.getCenter(); return { lat: c.lat, lng: c.lng }; })();
-  const now = new Date();
-  const area = await aiAreaName(p);
-  const ctx = [
-    `Zeit: ${now.toLocaleDateString(LOC, { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}, ${timeStr(now)} Uhr (${curTheme === 'day' ? 'hell' : 'dunkel'})`,
-    `${S.pos ? 'Standort' : 'Kartenmitte (kein GPS)'}: ${area || 'unbekannt'} (${p.lat.toFixed(5)}, ${p.lng.toFixed(5)})`,
-    `Fahrzeug: ${vehicleLabel()}${!isFree(vehicle) && vehicle.fuel && prices[vehicle.fuel === 'electric' ? 'kwh' : vehicle.fuel] ? ` · Preis ${fmtDec(prices[vehicle.fuel === 'electric' ? 'kwh' : vehicle.fuel])} €/${vehicle.fuel === 'electric' ? 'kWh' : 'L'}` : ''}`
-  ];
-  if (S.wxNow) ctx.push(`Wetter jetzt: ${S.wxNow.text}, ${Math.round(S.wxNow.temp)} °C${S.wxNow.warn ? ` (Warnung: ${S.wxNow.warn})` : ''}`);
-  if (S.routeWx && (S.mode === 'nav' || S.mode === 'preview')) ctx.push(`Wetter am Ziel bei Ankunft: ${wxDesc(S.routeWx.dest.code, S.routeWx.dest.day)[1]}, ${Math.round(S.routeWx.dest.temp)} °C, Regenrisiko ${S.routeWx.dest.pp} %${S.routeWx.warn ? ` – Warnung: ${S.routeWx.warn}` : ''}`);
-  if (S.limit) ctx.push(`Tempolimit hier: ${S.limit.none ? 'keins (Richtgeschwindigkeit 130)' : S.limit.v + ' km/h'}`);
-  if (S.routeFuel && S.routeFuel.best) ctx.push(`Günstigste Tankstelle an der Route: ${fuelName(S.routeFuel.best)} für ${fmtPrice(S.routeFuel.best.price)} €`);
-  if (park) ctx.push(`Geparktes Fahrzeug: ${fmtDist(haversine(p.lat, p.lng, park.lat, park.lng))} entfernt, geparkt ${agoStr(park.t)}`);
-  if (S.mode === 'nav' && S.nav) {
-    const remain = Math.max(0, S.nav.total - (S.nav.along || 0)), sec = S.nav.duration * (remain / S.nav.total);
-    const pts = [0.25, 0.5, 0.75].map(f => S.nav.coords[Math.floor((S.nav.coords.length - 1) * f)]).map(c => `${c[1].toFixed(4)}, ${c[0].toFixed(4)}`);
-    ctx.push(`Modus: Navigation zu „${S.dest ? S.dest.name : 'Ziel'}“${S.dest && S.dest.sub ? ` (${S.dest.sub})` : ''}, noch ${fmtDist(remain)}, Ankunft ca. ${timeStr(new Date(Date.now() + sec * 1000))}, aktuell ${Math.round(S.speed || 0)} km/h`);
-    ctx.push(`Punkte auf der Route: ${pts.join(' → ')}`);
-  } else if (S.mode === 'preview' && S.dest) {
-    ctx.push(`Modus: Routenvorschau zu „${S.dest.name}“${S.dest.sub ? ` (${S.dest.sub})` : ''} bei ${S.dest.lat.toFixed(5)}, ${S.dest.lng.toFixed(5)}`);
-  } else if (S.mode === 'free') {
-    ctx.push(`Modus: Freie Fahrt ohne Ziel, aktuell ${Math.round(S.speed || 0)} km/h`);
-  } else {
-    ctx.push('Modus: Karte ansehen, keine Fahrt aktiv');
-  }
-  const pois = aiNearbyPois(p).map(x => `- ${x.name} (${x.info.emoji} ${x.info.label}, ~${fmtDist(x.d)})`);
-  return `Du bist der KI-Beifahrer der Navi-App „NeonNav“. Antworte immer auf ${LINFO.ai || 'Deutsch'} (egal in welcher Sprache dieser Hinweis steht), locker, freundlich und KURZ: höchstens etwa 80 Wörter, gern 2–4 Stichpunkte mit „- “. Der Nutzer sitzt eventuell am Steuer – keine langen Texte, keine Tabellen.
-Wenn du einen Ort aus der Liste „Orte auf der Karte“ empfiehlst, schreibe seinen Namen exakt wie in der Liste in doppelten eckigen Klammern, z. B. [[Café Luitpold]] – dann kann der Nutzer ihn antippen. Erfinde keine Orte, Öffnungszeiten oder Bewertungen; nutze Google Maps, wenn verfügbar.
-Fordere nie zu riskantem oder verbotenem Fahrverhalten auf.
-
-Aktueller Kontext:
-${ctx.map(c => '- ' + c).join('\n')}
-
-Orte auf der Karte (nächste zuerst):
-${pois.length ? pois.join('\n') : '- (gerade keine geladen – Karte weiter hineinzoomen)'}`;
-}
-
-async function aiAsk(text) {
-  text = text.trim();
-  if (!text || aiBusy) return;
-  if (!aiKey) { aiRenderSetup(); return; }
-  aiBusy = true;
-  aiAppend('user', esc(text));
-  const wait = aiAppend('bot', '<span class="ai-dots"><span>●</span><span>●</span><span>●</span></span>');
-  $('aiInput').value = '';
-  const turn = { role: 'user', parts: [{ text }] };
-  try {
-    const sys = await aiSystemPrompt();
-    let model = await aiModel(false), j = null;
-    const p = S.pos || map.getCenter();
-    for (let attempt = 0; attempt < 3 && !j; attempt++) {
-      const body = { systemInstruction: { parts: [{ text: sys }] }, contents: aiHistory.slice(-12).concat([turn]) };
-      if (aiMapsOk) {
-        body.tools = [{ googleMaps: {} }];
-        body.toolConfig = { retrievalConfig: { latLng: { latitude: p.lat, longitude: p.lng }, languageCode: 'de' } };
-      }
-      try {
-        j = await geminiFetch(`models/${model}:generateContent`, { method: 'POST', body: JSON.stringify(body) });
-      } catch (e) {
-        if (aiKeyError(e)) throw e;
-        if (e.status === 404) { model = await aiModel(true); continue; }          // Modell abgeschaltet → neu wählen
-        if (aiMapsOk && e.status === 400) { aiMapsOk = false; continue; }         // Maps-Grounding nicht unterstützt
-        throw e;
-      }
-    }
-    const cand = j && j.candidates && j.candidates[0];
-    const answer = cand && cand.content && (cand.content.parts || []).filter(x => x.text && !x.thought).map(x => x.text).join('').trim();
-    if (!answer) throw new Error(cand && cand.finishReason === 'SAFETY' ? L('Dazu kann ich leider nichts sagen.') : L('Keine Antwort erhalten.'));
-    aiHistory.push(turn, { role: 'model', parts: [{ text: answer }] });
-    // Google-Maps-Quellen müssen direkt unter der Antwort stehen
-    const chunks = (cand.groundingMetadata && cand.groundingMetadata.groundingChunks) || [];
-    const srcs = [], seenUri = new Set();
-    for (const c of chunks) {
-      const s = c.maps || c.web;
-      const uri = s && safeUrl(s.uri);
-      if (!uri || seenUri.has(uri)) continue;
-      seenUri.add(uri); srcs.push({ uri, title: s.title || shortUrl(uri), maps: !!c.maps });
-    }
-    let html = aiFormat(answer);
-    if (srcs.length) html += `<span class="ai-src">${srcs.some(s => s.maps) ? L('Quelle') + ': Google Maps · ' : L('Quellen') + ': '}${srcs.slice(0, 5).map(s =>
-      `<a href="${esc(s.uri)}" target="_blank" rel="noopener">${esc(s.title)}</a>`).join(' · ')}</span>`;
-    wait.innerHTML = html;
-    if (S.mode === 'nav' || S.mode === 'free') speak(answer.replace(/\[\[(.+?)\]\]/g, '$1').replace(/[*#_`]/g, '').replace(/^\s*-\s+/gm, '').slice(0, 400));
-  } catch (e) {
-    wait.innerHTML = aiKeyError(e)
-      ? '🔑 ' + L('Der API-Schlüssel wurde abgelehnt. Bitte in den Einstellungen prüfen.')
-      : e.status === 429 ? '⏳ ' + L('Zu viele Anfragen – kurz warten und nochmal versuchen.')
-      : `⚠️ ${esc(e.message || L('Keine Verbindung zu Gemini.'))}`;
-  } finally {
-    aiBusy = false;
-    $('aiLog').scrollTop = $('aiLog').scrollHeight;
-  }
-}
-
-// Leichtes Markdown: **fett**, Stichpunkte, [[Ort]] als antippbarer Knopf
-function aiFormat(t) {
-  const inline = s => esc(s)
-    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
-    .replace(/\[\[(.+?)\]\]/g, (_, n) => `<button class="ai-place" data-n="${n}">📍 ${n}</button>`);
-  let html = '', inList = false;
-  for (const line of t.split('\n')) {
-    const m = line.match(/^\s*[-*•]\s+(.*)$/);
-    if (m) { if (!inList) { html += '<ul>'; inList = true; } html += `<li>${inline(m[1])}</li>`; continue; }
-    if (inList) { html += '</ul>'; inList = false; }
-    if (line.trim()) html += `<div>${inline(line.replace(/^#+\s*/, ''))}</div>`;
-  }
-  return html + (inList ? '</ul>' : '');
-}
-function aiAppend(who, html) {
-  const el = document.createElement('div');
-  el.className = 'ai-msg ' + (who === 'user' ? 'ai-user' : 'ai-bot');
-  el.innerHTML = html;
-  $('aiLog').appendChild(el);
-  $('aiLog').scrollTop = $('aiLog').scrollHeight;
-  return el;
-}
-function aiShowPlace(name) {
-  const f = aiPlaces.get(name.toLowerCase());
-  closeAi();
-  if (!f) { openSearch(); $('searchInput').value = name; doSearch(name); return; }
-  if (S.follow) { S.follow = false; $('recenterBtn').classList.add('active-ring'); }
-  map.flyTo({ center: f.geometry.coordinates, zoom: Math.max(map.getZoom(), 17), duration: 900 });
-  map.once('moveend', () => poiPopup(f));
-}
-function aiRenderSetup() {
-  $('aiLog').innerHTML = '';
-  const el = aiAppend('bot', `${L('Hi! Ich bin dein KI-Beifahrer ✨')}<br>${L('Dafür brauche ich einen kostenlosen <b>Gemini API-Schlüssel</b> von Google.')}
-    <button id="aiSetup" class="mt-2 w-full h-11 rounded-xl font-bold text-white" style="background:linear-gradient(135deg,#6366f1,#ec4899)">🔑 ${L('Schlüssel eintragen')}</button>`);
-  el.querySelector('#aiSetup').onclick = () => { closeAi(); openSettings(); setTimeout(() => $('aiKey').focus(), 50); };
-}
-function aiRenderChips() {
-  const evening = new Date().getHours() >= 17;
-  const chips = S.mode === 'nav' ? ['☕ ' + L('Pause-Tipp auf meiner Route'), '🍽️ ' + L('Essen am Ziel?'), '🅿️ ' + L('Wo parke ich am Ziel?'), '⛽ ' + L('Tipps zum Sprit sparen')]
-    : S.mode === 'preview' ? ['🎯 ' + L('Was gibt es am Ziel?'), '🍽️ ' + L('Essen am Ziel?'), '🅿️ ' + L('Parken am Ziel?')]
-    : S.mode === 'free' ? ['☕ ' + L('Kaffee-Stopp in der Nähe'), '🛣️ ' + L('Schöne Strecke für eine Spritztour?'), '⛽ ' + L('Tipps zum Sprit sparen')]
-    : [evening ? '🍸 ' + L('Schöne Bar für heute Abend?') : '☕ ' + L('Gutes Café in der Nähe?'), '🍽️ ' + L('Wo kann ich hier gut essen?'), '🎯 ' + L('Was kann man hier unternehmen?'), '🛒 ' + L('Supermarkt, der noch offen hat?')];
-  $('aiChips').innerHTML = chips.map(c => `<button type="button" class="ai-chip">${esc(c)}</button>`).join('');
-  $('aiChips').querySelectorAll('button').forEach(b => b.onclick = () => aiAsk(b.textContent.replace(/^\S+\s/, '')));
-}
-/* --- Spracheingabe: nativ in der iOS-App, sonst Web Speech API (Safari/Chrome) --- */
-const WebSR = window.SpeechRecognition || window.webkitSpeechRecognition;
-const nativeSpeech = !!window.__nnNativeSpeech;
-const canListen = nativeSpeech || !!WebSR;
-let listening = false, webRec = null;
-function setListening(on) {
-  listening = on;
-  $('aiMic').classList.toggle('listening', on);
-  $('aiInput').placeholder = on ? L('Ich höre zu…') : L('Frag mich etwas…');
-}
-function onSpeech(text, final, err) {
-  if (err) { setListening(false); toast(err); return; }
-  if (text) $('aiInput').value = text;
-  if (final) { setListening(false); if (text && text.trim()) aiAsk(text); }
-}
-window.neonnavSpeech = { on: (t, f, e) => onSpeech(t || '', !!f, e || null) };
-function aiListen() {
-  if (listening) { aiStopListen(); return; }
-  if (!aiKey) { aiRenderSetup(); return; }
-  if ('speechSynthesis' in window) speechSynthesis.cancel(); // nicht die eigene Ansage „hören“
-  $('aiInput').value = '';
-  setListening(true);
-  if (nativeSpeech) { try { window.webkit.messageHandlers.native.postMessage({ type: 'listen', on: true, lang: LOC }); } catch (e) { setListening(false); } return; }
-  try {
-    webRec = new WebSR();
-    webRec.lang = LOC; webRec.interimResults = true; webRec.maxAlternatives = 1; webRec.continuous = false;
-    let last = '';
-    webRec.onresult = e => {
-      const res = [...e.results];
-      last = res.map(r => r[0].transcript).join('');
-      onSpeech(last, false, null);
-    };
-    webRec.onerror = e => { webRec = null; onSpeech('', true, e.error === 'not-allowed' ? L('Mikrofon nicht erlaubt') : e.error === 'no-speech' ? null : L('Spracheingabe fehlgeschlagen')); };
-    webRec.onend = () => { if (webRec) { webRec = null; onSpeech(last, true, null); } };
-    webRec.start();
-  } catch (e) { setListening(false); toast(L('Spracheingabe nicht verfügbar')); }
-}
-function aiStopListen() {
-  if (nativeSpeech) { try { window.webkit.messageHandlers.native.postMessage({ type: 'listen', on: false }); } catch (e) {} }
-  else if (webRec) { try { webRec.stop(); } catch (e) {} }
-  else setListening(false);
-}
-
-function openAi() {
-  unlockAudio();
-  if (!aiKey) aiRenderSetup();
-  else if (!$('aiLog').children.length || $('aiSetup')) {
-    $('aiLog').innerHTML = '';
-    aiAppend('bot', L('Hi! Ich bin dein KI-Beifahrer ✨ Frag mich nach Cafés, Restaurants, Ausflugstipps oder deiner Route.'));
-  }
-  $('aiSub').textContent = (S.mode === 'nav' || S.mode === 'free') && S.speed > 10
-    ? L('Bitte nur im Stand tippen – Antworten werden vorgelesen') : L('Tipps für deine Umgebung & Fahrt');
-  aiRenderChips();
-  $('aiMic').classList.toggle('hidden', !canListen);
-  $('aiModal').classList.remove('hidden');
-  // Während der Fahrt direkt zuhören – kein Tippen nötig
-  if (canListen && aiKey && (S.mode === 'nav' || S.mode === 'free') && S.speed > 10 && !listening) setTimeout(aiListen, 250);
-}
-function closeAi() { if (listening) aiStopListen(); $('aiModal').classList.add('hidden'); $('aiInput').blur(); }
-function aiReset() { aiHistory = []; $('aiLog').innerHTML = ''; openAi(); }
 
 /* =================================================================
    ERFOLGE, STATISTIK & ENTDECKER
@@ -3292,17 +3010,30 @@ $('searchOpen').onclick = () => { if (sheetOpen) openSearch(); else setSheetOpen
 $('sheetToggle').onclick = () => setSheetOpen(!sheetOpen);
 map.on('click', () => { if (sheetOpen) setSheetOpen(false); });
 map.on('dragstart', () => { if (sheetOpen) setSheetOpen(false); });
-$('searchClose').onclick = closeSearch;
-$('searchInput').addEventListener('input', () => {
-  clearTimeout(searchTimer);
-  const q = $('searchInput').value.trim();
-  if (q.length < 3) { searchSeq++; renderRecentsList(); return; }
-  $('searchResults').innerHTML = `<div class="text-center text-cyan-300 py-8 font-game text-sm blink">${L('SCANNE…')}</div>`;
-  searchTimer = setTimeout(() => doSearch(q), 550);
+$('searchClose').onclick = () => { closeSearch(); if (S.mode !== 'preview') S.start = null; };
+// Start- und Zielfeld teilen sich die Trefferliste; das zuletzt fokussierte Feld bekommt den gewählten Ort
+['startInput', 'searchInput'].forEach(id => {
+  const inp = $(id), target = id === 'startInput' ? 'start' : 'dest';
+  inp.addEventListener('focus', () => {
+    if (searchTarget === target) return;
+    searchTarget = target; searchSeq++; clearTimeout(searchTimer);
+    const q = inp.value.trim();
+    if (q.length >= 3 && !(target === 'start' && S.start && q === S.start.name)) doSearch(q); else renderRecentsList();
+  });
+  inp.addEventListener('input', () => {
+    searchTarget = target;
+    if (target === 'start' && !inp.value.trim()) S.start = null;
+    clearTimeout(searchTimer);
+    const q = inp.value.trim();
+    if (q.length < 3) { searchSeq++; renderRecentsList(); return; }
+    $('searchResults').innerHTML = `<div class="text-center text-cyan-300 py-8 font-game text-sm blink">${L('SCANNE…')}</div>`;
+    searchTimer = setTimeout(() => doSearch(q), 550);
+  });
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { const q = inp.value.trim(); if (q.length >= 2) { clearTimeout(searchTimer); doSearch(q); } }
+  });
 });
-$('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') { const q = $('searchInput').value.trim(); if (q.length >= 2) { clearTimeout(searchTimer); doSearch(q); } }
-});
+$('swapBtn').onclick = swapRoute;
 $('previewClose').onclick = cancelPreview;
 $('favBtn').onclick = () => { if (S.dest) openFavModal(S.dest); };
 document.querySelectorAll('.fav-opt').forEach(b => b.onclick = () => { if (favTarget) saveFav(favTarget, b.dataset.ft); closeFavModal(); });
@@ -3326,18 +3057,6 @@ $('settingsClose').onclick = closeSettings;
 $('settingsModal').onclick = e => { if (e.target.id === 'settingsModal') closeSettings(); };
 $('osmToggle').onchange = () => setOsmEnabled($('osmToggle').checked);
 $('poiToggle').onchange = () => setPoisEnabled($('poiToggle').checked);
-$('aiKey').onchange = () => {
-  aiKey = $('aiKey').value.trim(); store.set(LS.ai, aiKey);
-  store.set(LS.aiModel, null); aiMapsOk = true;
-  $('aiKeyInfo').textContent = aiKey ? L('Schlüssel gespeichert ✓') : L('Schlüssel entfernt');
-};
-$('aiBtn').onclick = openAi;
-$('aiClose').onclick = closeAi;
-$('aiReset').onclick = aiReset;
-$('aiMic').onclick = aiListen;
-$('aiModal').onclick = e => { if (e.target.id === 'aiModal') closeAi(); };
-$('aiForm').onsubmit = e => { e.preventDefault(); aiAsk($('aiInput').value); };
-$('aiLog').onclick = e => { const b = e.target.closest('.ai-place'); if (b) aiShowPlace(b.dataset.n); };
 $('voiceTest').onclick = testVoice;
 $('tkLoad').onclick = () => loadFuelPrices(false);
 $('modelSel').onchange = () => {

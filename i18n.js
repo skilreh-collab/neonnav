@@ -497,6 +497,13 @@ window.NN_I18N = {
     "✨ KI-BEIFAHRER": ["✨ AI CO-PILOT", "✨ COPILOTO IA", "✨ COPILOTE IA", "✨ COPILOTA IA", "✨ YZ YARDIMCI PİLOT"],
     "Neues Gespräch": ["New conversation", "Nueva conversación", "Nouvelle conversation", "Nuova conversazione", "Yeni sohbet"],
     "Spracheingabe": ["Voice input", "Entrada de voz", "Saisie vocale", "Input vocale", "Sesli giriş"],
-    "Senden": ["Send", "Enviar", "Envoyer", "Invia", "Gönder"]
+    "Senden": ["Send", "Enviar", "Envoyer", "Invia", "Gönder"],
+    // --- Start & Ziel ---
+    "📍 Mein Standort": ["📍 My location", "📍 Mi ubicación", "📍 Ma position", "📍 La mia posizione", "📍 Konumum"],
+    "Mein Standort": ["My location", "Mi ubicación", "Ma position", "La mia posizione", "Konumum"],
+    "Aktuelle GPS-Position": ["Current GPS position", "Posición GPS actual", "Position GPS actuelle", "Posizione GPS attuale", "Mevcut GPS konumu"],
+    "Ziel: Adresse, Ort, Restaurant…": ["Destination: address, place, restaurant…", "Destino: dirección, lugar, restaurante…", "Destination : adresse, lieu, restaurant…", "Destinazione: indirizzo, luogo, ristorante…", "Hedef: adres, yer, restoran…"],
+    "Von: {n}": ["From: {n}", "Desde: {n}", "Depuis : {n}", "Da: {n}", "Başlangıç: {n}"],
+    "Start und Ziel tauschen": ["Swap start and destination", "Intercambiar origen y destino", "Inverser départ et destination", "Inverti partenza e destinazione", "Başlangıç ve hedefi değiştir"]
   }
 };
