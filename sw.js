@@ -1,23 +1,18 @@
 // NeonNav Service Worker – macht die App installierbar und offline startfähig
-const VERSION = 'neonnav-v12';
+const VERSION = 'neonnav-v13';
 const TILE_CACHE = 'neonnav-tiles-v1';
 const MAX_TILES = 2500;
 
-const SHELL = ['./', './index.html', './cars.js', './i18n.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
-const CDN = [
-  'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',
-  'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
-  'https://cdn.tailwindcss.com'
-];
-// Live-Daten nie aus dem Cache: Routing, Suche, Blitzer, Spritpreise, KI
+const SHELL = ['./', './index.html', './cars.js', './i18n.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png',
+               './maplibre-gl.js', './maplibre-gl.css', './tailwind.css'];
+// Live-Daten nie aus dem Cache: Routing, Suche, Blitzer, Spritpreise, Wetter
 const LIVE_HOSTS = ['routing.openstreetmap.de', 'router.project-osrm.org', 'nominatim.openstreetmap.org',
                     'overpass-api.de', 'overpass.kumi.systems', 'maps.mail.ru', 'overpass.private.coffee',
-                    'creativecommons.tankerkoenig.de', 'generativelanguage.googleapis.com', 'api.open-meteo.com'];
+                    'creativecommons.tankerkoenig.de', 'api.open-meteo.com'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(async c => {
     await c.addAll(SHELL);
-    await Promise.all(CDN.map(u => fetch(u, { mode: 'no-cors' }).then(r => c.put(u, r)).catch(() => {})));
   }).then(() => self.skipWaiting()));
 });
 

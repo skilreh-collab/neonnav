@@ -16,9 +16,9 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css">
-  <script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Bibliotheken liegen lokal in der App: schneller Start, auch ohne Netz -->
+  <link rel="stylesheet" href="maplibre-gl.css">
+  <script src="maplibre-gl.js"></script>
 
   <style>
     :root { --neon:#00e5ff; --pink:#ff2bd6; --lime:#a3ff12; --bg:#05060f; --panel:rgba(9,11,28,.88); --sheet-h:200px; }
@@ -99,6 +99,8 @@
     #gauge.over #gSpeed { color:#fb7185; }
     @keyframes achIn { 0% { transform:translate(-50%,-30px) scale(.8); opacity:0; } 12% { transform:translate(-50%,0) scale(1.04); opacity:1; } 18% { transform:translate(-50%,0) scale(1); } 88% { opacity:1; } 100% { opacity:0; transform:translate(-50%,-10px); } }
     #achPop.show { animation:achIn 4.2s ease forwards; }
+    .start-mk { width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font:900 16px Inter, sans-serif; color:#05060f; border:3px solid #fff;
+                background:linear-gradient(135deg,#a3ff12,#5effc4); box-shadow:0 0 18px rgba(163,255,18,.9); }
     .dest-mk { width:40px; height:40px; border-radius:50%; display:grid; place-items:center; font-size:20px; border:3px solid #fff;
                background:linear-gradient(135deg,#ff2bd6,#7c3aed); box-shadow:0 0 22px rgba(255,43,214,.95); }
 
@@ -132,6 +134,8 @@
     /* Toast */
     #toast { transition:opacity .3s, transform .3s; }
   </style>
+  <!-- Tailwind fest gebaut (tools/build-css.sh) – nach den eigenen Stilen, wie zuvor beim CDN -->
+  <link rel="stylesheet" href="tailwind.css">
 </head>
 <body>
 
@@ -2336,11 +2340,19 @@ function setRouteOnMap(N) {
 /* =================================================================
    ZIEL, VORSCHAU, START, ANKUNFT
    ================================================================= */
-let destMarker = null;
+let destMarker = null, startMarker = null;
+// Marker „A“ für einen eigenen Startpunkt aus der Suche
+function setStartMarker(p) {
+  if (startMarker) startMarker.remove();
+  startMarker = null;
+  if (!p) return;
+  const el = document.createElement('div'); el.className = 'start-mk'; el.textContent = 'A';
+  startMarker = new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(map);
+}
 function setDestMarker(p) {
   if (destMarker) destMarker.remove();
   destMarker = null;
-  if (!p) return;
+  if (!p) { setStartMarker(null); return; }
   const el = document.createElement('div'); el.className = 'dest-mk'; el.textContent = '🏁';
   destMarker = new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(map);
 }
@@ -2352,6 +2364,7 @@ async function setDestination(place) {
   S.dest = place;
   if (!place.walk && !place.here) saveRecent(place);
   setDestMarker(place);
+  setStartMarker(S.start);
   renderFavBtn();
   $('destName').textContent = place.name;
   $('destSub').textContent = place.sub || '';
@@ -2501,6 +2514,14 @@ function flyBannerIntoCar() {
     vibrate(30);
   }, 850);
 }
+// Fahrzeug antippen holt das Banner bei freier Fahrt kurz zurück
+puckEl.addEventListener('click', e => {
+  if (S.mode !== 'free' || !$('navTop').classList.contains('hidden')) return;
+  e.stopPropagation();
+  resetFreeBanner();
+  $('navTop').classList.remove('hidden');
+  S.freeBannerTimer = setTimeout(flyBannerIntoCar, 3500);
+});
 function resetFreeBanner() {
   clearTimeout(S.freeBannerTimer);
   $('navTop').classList.remove('fly-in');
