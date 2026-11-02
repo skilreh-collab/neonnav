@@ -1,12 +1,12 @@
 // NeonNav Service Worker – macht die App installierbar und offline startfähig
-const VERSION = 'neonnav-v17';
+const VERSION = 'neonnav-v18';
 const TILE_CACHE = 'neonnav-tiles-v1';
 const MAX_TILES = 2500;
 
 const SHELL = ['./', './index.html', './cars.js', './i18n.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png',
                './maplibre-gl.js', './maplibre-gl.css', './tailwind.css', './app.css',
                './app-core.js', './app-map.js', './app-vehicle.js', './app-live.js', './app-drive.js',
-               './app-places.js', './app-history.js', './app-ui.js'];
+               './app-places.js', './app-history.js', './app-explore.js', './app-ui.js'];
 // Live-Daten nie aus dem Cache: Routing, Suche, Blitzer, Spritpreise, Wetter
 const LIVE_HOSTS = ['routing.openstreetmap.de', 'router.project-osrm.org', 'nominatim.openstreetmap.org',
                     'overpass-api.de', 'overpass.kumi.systems', 'maps.mail.ru', 'overpass.private.coffee',

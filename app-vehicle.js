@@ -102,6 +102,7 @@ const KINDS = [
   { id: 'car',   icon: '🚗', label: L('Auto') },
   { id: 'moto',  icon: '🏍️', label: L('Motorrad') },
   { id: 'ebike', icon: '⚡', label: L('E-Bike') },
+  { id: 'scooter', icon: '🛴', label: L('E-Roller') },
   { id: 'bike',  icon: '🚲', label: L('Fahrrad') },
   { id: 'foot',  icon: '🚶', label: L('Zu Fuß') }
 ];
@@ -117,7 +118,13 @@ const PRESETS = {
                    ['Kia EV6', 18.0], ['BMW i4', 17.0], ['Renault Zoe', 17.5], ['Fiat 500e', 14.5], ['Mercedes EQA', 17.5], ['BYD Atto 3', 16.5]],
   'moto:benzin': [['Vespa / Roller 125', 2.5], ['Yamaha MT-07', 4.3], ['Honda CB500', 3.6], ['KTM 390 Duke', 3.4], ['BMW R 1250 GS', 4.8], ['Harley-Davidson Softail', 5.6]],
   'moto:electric': [['E-Roller (45 km/h)', 4.0], ['Zero SR/F', 9.0]],
-  'ebike:electric': [['Pedelec / E-Bike', 1.0], ['E-Mountainbike', 1.3], ['S-Pedelec (45 km/h)', 2.0], ['E-Scooter', 1.5]]
+  // E-Bikes & E-Roller: [Modell, kWh/100 km, Akku in Wh] – Verbrauch im mittleren Unterstützungsmodus
+  'ebike:electric': [['Pedelec / E-Bike (500 Wh)', 1.0, 500], ['Pedelec / E-Bike (625 Wh)', 1.0, 625], ['Pedelec / E-Bike (750 Wh)', 1.05, 750],
+                     ['City-E-Bike (400 Wh)', 0.9, 400], ['E-Mountainbike (625 Wh)', 1.3, 625], ['E-Mountainbike (750 Wh)', 1.35, 750],
+                     ['Lasten-E-Bike (545 Wh)', 1.4, 545], ['S-Pedelec (45 km/h, 625 Wh)', 2.0, 625]],
+  'scooter:electric': [['Xiaomi Electric Scooter 4 Pro', 1.6, 446], ['Xiaomi Electric Scooter 4', 1.5, 275], ['Segway Ninebot Max G30D', 1.5, 551],
+                       ['Segway Ninebot Max G2 D', 1.5, 551], ['Segway Ninebot F2 Plus D', 1.4, 477], ['NIU KQi3 Pro', 1.4, 365],
+                       ['VMAX VX2 Pro', 1.5, 556], ['E-Roller allgemein', 1.5, 400]]
 };
 const DEFAULT_PRICES = { e5: 1.85, e10: 1.79, diesel: 1.72, kwh: 0.36, updated: 0, source: 'default' };
 const CO2 = { e5: 2.37, e10: 2.30, diesel: 2.65, electric: 0.38 }; // kg CO₂ pro L bzw. kWh (Strommix grob)
@@ -128,7 +135,22 @@ let tkKey = store.get(LS.tk, '');
 
 const kindInfo = k => KINDS.find(x => x.id === k) || KINDS[0];
 const isFree = v => v.kind === 'bike' || v.kind === 'foot';
-const profileOf = v => (v.kind === 'bike' || v.kind === 'ebike') ? 'bike' : v.kind === 'foot' ? 'foot' : 'car';
+// E-Roller fahren auf Radwegen – also Fahrrad-Routing
+const profileOf = v => (v.kind === 'bike' || v.kind === 'ebike' || v.kind === 'scooter') ? 'bike' : v.kind === 'foot' ? 'foot' : 'car';
+const isLightEV = v => (v.kind === 'ebike' || v.kind === 'scooter') && +v.batt > 0;
+const canExplore = v => v.kind === 'bike' || v.kind === 'ebike' || v.kind === 'scooter';
+// Reichweite in km mit dem angegebenen Ladestand; 10 % Puffer für Steigungen, Wind und Kälte
+function rangeKm(v = vehicle, charge = v.charge != null ? v.charge : 100) {
+  if (!isLightEV(v) || !(+v.cons > 0)) return null;
+  const whPerKm = +v.cons * 10;
+  return Math.max(0, (+v.batt * clamp(charge, 0, 100) / 100) * .9 / whPerKm);
+}
+// Akkuverbrauch einer Strecke in Prozent
+function chargeUsed(m, v = vehicle) {
+  if (!isLightEV(v)) return 0;
+  return (m / 1000) * (+v.cons * 10) / +v.batt * 100;
+}
+const fmtKm = km => km < 10 ? km.toFixed(1).replace('.', DEC) : String(Math.round(km));
 const fmtEur = e => e.toLocaleString(LOC, { style: 'currency', currency: 'EUR' });
 const presetKey = (kind, fuel) => `${kind}:${fuel === 'electric' ? 'electric' : (fuel === 'diesel' ? 'diesel' : 'benzin')}`;
 // Zahlen deutsch anzeigen (Komma) und tolerant einlesen (Komma oder Punkt)
@@ -256,7 +278,7 @@ function renderGarage() {
   $('kindTabs').innerHTML = KINDS.map(k => `<button data-k="${k.id}" ${tabBtn(draft.kind === k.id, `<span class="text-lg">${k.icon}</span>${k.label}`)}</button>`).join('');
   $('kindTabs').querySelectorAll('button').forEach(b => b.onclick = () => {
     draft.kind = b.dataset.k;
-    if (draft.kind === 'ebike') draft.fuel = 'electric';
+    if (draft.kind === 'ebike' || draft.kind === 'scooter') draft.fuel = 'electric';
     if (draft.kind === 'moto' && !['e5', 'e10', 'electric'].includes(draft.fuel)) draft.fuel = 'e5';
     if (draft.kind === 'car' && !draft.fuel) draft.fuel = 'e5';
     pickFirstPreset(); renderGarage();
@@ -286,6 +308,24 @@ function renderGarage() {
     $('consInput').value = fmtDec(draft.cons);
     $('consUnit').textContent = draft.fuel === 'electric' ? 'kWh / 100 km' : 'L / 100 km';
   }
+  // Akku & Reichweite nur bei E-Bike und E-Roller
+  const light = draft.kind === 'ebike' || draft.kind === 'scooter';
+  $('battWrap').classList.toggle('hidden', !light);
+  if (light) {
+    if (!(+draft.batt > 0)) draft.batt = 500;
+    if (draft.charge == null) draft.charge = 100;
+    $('battInput').value = Math.round(draft.batt);
+    $('chargeInput').value = Math.round(draft.charge);
+    renderRangeInfo();
+  }
+}
+// Reichweite live anzeigen, während Akku, Ladestand oder Verbrauch geändert werden
+function renderRangeInfo() {
+  const d = Object.assign({}, draft, { batt: parseDec($('battInput').value), cons: parseDec($('consInput').value), charge: parseDec($('chargeInput').value) });
+  $('chargeVal').textContent = `${Math.round(clamp(d.charge || 0, 0, 100))} %`;
+  const km = rangeKm(d), full = rangeKm(d, 100);
+  $('rangeInfo').innerHTML = km == null ? L('Akku und Verbrauch eingeben')
+    : `🔋 ${L('Reichweite jetzt')}: <b class="text-lime-300 font-game">~${fmtKm(km)} km</b> · ${L('voll geladen')} ~${fmtKm(full)} km`;
 }
 function pickFirstPreset() {
   if (isFree(draft)) { draft.model = ''; draft.cons = 0; return; }
@@ -294,13 +334,18 @@ function pickFirstPreset() {
     if (!brands.includes(draft.brand)) draft.brand = brands.includes('VW') ? 'VW' : brands[0];
   }
   const list = modelList(draft.kind, draft.fuel, draft.brand);
-  if (list.length) { draft.model = list[0][0]; draft.cons = list[0][1]; }
+  if (list.length) { draft.model = list[0][0]; draft.cons = list[0][1]; if (list[0][2]) draft.batt = list[0][2]; }
 }
 function saveGarage() {
   if (!isFree(draft)) {
     const c = parseDec($('consInput').value);
     if (!(c > 0 && c < 60)) { toast(L('Bitte einen gültigen Verbrauch eingeben')); return; }
     draft.cons = c;
+    if (draft.kind === 'ebike' || draft.kind === 'scooter') {
+      const b = parseDec($('battInput').value), ch = parseDec($('chargeInput').value);
+      if (!(b >= 50 && b <= 5000)) { toast(L('Bitte eine gültige Akkugröße in Wh eingeben')); return; }
+      draft.batt = b; draft.charge = clamp(isNaN(ch) ? 100 : ch, 0, 100);
+    }
     if ($('modelSel').value === '__custom') draft.model = draft.model && !modelList(draft.kind, draft.fuel, draft.brand).some(([n]) => n === draft.model) ? draft.model : L('Eigenes Fahrzeug');
   }
   const prevProfile = profileOf(vehicle);
@@ -312,7 +357,7 @@ function saveGarage() {
   if (changed) prices.source = 'manual';
   store.set(LS.prices, prices);
   tkKey = $('tkKey').value.trim(); store.set(LS.tk, tkKey);
-  renderVehicleBtn(); closeGarage();
+  renderVehicleBtn(); renderExploreBtn(); closeGarage();
   toast(`${vehicleLabel()} gespeichert`);
   // Vorschau neu berechnen, wenn sich das Routing-Profil geändert hat
   if (S.mode === 'preview' && S.dest) { if (profileOf(vehicle) !== prevProfile) setDestination(S.dest); else drawPreview(false); }

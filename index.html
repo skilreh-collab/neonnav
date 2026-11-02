@@ -184,8 +184,13 @@
       </div>
       <div id="favChips" class="flex gap-2 overflow-x-auto scroll-none mt-2"></div>
       <div id="recentChips" class="flex gap-2 overflow-x-auto scroll-none mt-2"></div>
-      <button id="freeBtn" class="mt-2 w-full h-12 rounded-2xl font-game font-bold text-sm tracking-wider text-black"
-              style="background:linear-gradient(90deg,var(--lime),#5effc4);box-shadow:0 0 20px rgba(163,255,18,.4)">🏁 FREIE FAHRT</button>
+      <div id="driveBtns" class="mt-2 grid gap-2">
+        <button id="freeBtn" class="w-full h-12 rounded-2xl font-game font-bold text-sm tracking-wider text-black"
+                style="background:linear-gradient(90deg,var(--lime),#5effc4);box-shadow:0 0 20px rgba(163,255,18,.4)">🏁 FREIE FAHRT</button>
+        <!-- nur bei Fahrrad, E-Bike und E-Roller -->
+        <button id="exploreStart" class="hidden w-full h-12 rounded-2xl font-game font-bold text-sm tracking-wider text-white"
+                style="background:linear-gradient(90deg,#a855f7,#ff2bd6);box-shadow:0 0 20px rgba(255,43,214,.4)">🧭 ERKUNDEN</button>
+      </div>
     </div></div>
   </div>
 </div>
@@ -228,6 +233,7 @@
       </div>
       <button id="endBtn" class="shrink-0 h-12 px-4 rounded-2xl bg-red-600 font-game font-bold text-sm tracking-wider active:scale-95 transition">ENDE</button>
     </div>
+    <div id="rangeLine" class="hidden mt-2 px-1 text-sm font-bold"></div>
     <div id="costLine" data-extra class="mt-2 px-1 flex justify-between gap-2 text-sm font-semibold text-slate-200"></div>
     <div id="driveDest" data-extra class="mt-1.5 px-1 text-sm font-bold text-cyan-100 truncate"></div>
   </div>
@@ -309,6 +315,23 @@
           <span id="consUnit" class="text-slate-300 text-sm">L / 100 km</span>
         </div>
         <p class="text-[11px] text-slate-500 mt-1">Richtwerte nach Herstellerangabe, gerundet. Trag deinen echten Verbrauch ein, dann wird's genauer.</p>
+        <!-- Akku & Reichweite (E-Bike, E-Roller) -->
+        <div id="battWrap" class="hidden mt-3 rounded-xl bg-slate-900/70 border border-lime-400/25 p-3 space-y-2">
+          <div class="text-[11px] uppercase tracking-[.2em] text-lime-300 font-game">🔋 Akku & Reichweite</div>
+          <div class="flex items-center gap-2">
+            <input id="battInput" type="text" inputmode="numeric" autocomplete="off" placeholder="500" class="w-28 h-12 rounded-xl bg-slate-950 border border-slate-700 px-3 text-white font-game">
+            <span class="text-slate-300 text-sm">Wh Akku</span>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-sm text-slate-300"><span>Ladestand</span><span id="chargeVal" class="font-game font-bold text-white">100 %</span></div>
+            <div class="flex items-center gap-2 mt-1">
+              <input id="chargeInput" type="range" min="0" max="100" step="5" value="100" class="flex-1 accent-lime-400">
+              <button id="chargeFull" type="button" class="h-9 px-3 rounded-xl bg-lime-400/15 border border-lime-400/40 text-lime-200 text-xs font-bold">⚡ Voll</button>
+            </div>
+          </div>
+          <div id="rangeInfo" class="text-sm text-slate-200"></div>
+          <p class="text-[11px] text-slate-500">Der Ladestand sinkt nach jeder Fahrt automatisch. Nach dem Laden einfach auf „Voll“ tippen.</p>
+        </div>
       </div>
       <div id="noCostInfo" class="hidden rounded-xl bg-lime-400/10 border border-lime-400/30 p-3 text-sm text-lime-200">Kostet nichts – dafür zählt die App deine verbrannten Kalorien. 🔥</div>
 
@@ -462,6 +485,7 @@
 <script src="app-drive.js"></script>
 <script src="app-places.js"></script>
 <script src="app-history.js"></script>
+<script src="app-explore.js"></script>
 <script src="app-ui.js"></script>
 </body>
 </html>

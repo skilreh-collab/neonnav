@@ -68,7 +68,7 @@ const srcCache = {};
 let firstStyle = true;
 map.on('style.load', () => {
   styleTweaks();
-  ['explore', 'alts', 'route', 'trail', 'history', 'cams'].forEach(id => {
+  ['explore', 'cells', 'bikeroutes', 'alts', 'route', 'trail', 'history', 'cams'].forEach(id => {
     if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: srcCache[id] || emptyFC(), lineMetrics: id === 'route' });
   });
   const lay = { 'line-cap': 'round', 'line-join': 'round' };
@@ -78,6 +78,16 @@ map.on('style.load', () => {
     'heatmap-radius': ['interpolate', ['linear'], ['zoom'], 5, 3, 12, 9, 16, 22],
     'heatmap-color': ['interpolate', ['linear'], ['heatmap-density'], 0, 'rgba(0,0,0,0)', .12, '#1d4ed8', .4, '#00e5ff', .7, '#a855f7', 1, '#ff2bd6'],
     'heatmap-opacity': .9 } });
+  // Erkunden: erkundete Kacheln und Radrouten aus OpenStreetMap (app-explore.js)
+  map.addLayer({ id: 'cells-fill', type: 'fill', source: 'cells', paint: {
+    'fill-color': ['match', ['get', 'st'], 'new', '#ff2bd6', '#00e5ff'], 'fill-opacity': ['match', ['get', 'st'], 'new', .3, .1] } });
+  map.addLayer({ id: 'cells-line', type: 'line', source: 'cells', paint: {
+    'line-color': ['match', ['get', 'st'], 'new', '#ff2bd6', '#00e5ff'], 'line-width': .8, 'line-opacity': .35 } });
+  const bp = typeof bikeRoutePaint === 'function' ? bikeRoutePaint() : { width: 4, opacity: .85, glow: .22 };
+  map.addLayer({ id: 'bikeroutes-glow', type: 'line', source: 'bikeroutes', layout: lay, paint: {
+    'line-color': ['get', 'color'], 'line-width': 14, 'line-blur': 9, 'line-opacity': bp.glow } });
+  map.addLayer({ id: 'bikeroutes-line', type: 'line', source: 'bikeroutes', layout: lay, paint: {
+    'line-color': ['get', 'color'], 'line-width': bp.width, 'line-opacity': bp.opacity } });
   map.addLayer({ id: 'alts-line', type: 'line', source: 'alts', layout: lay, paint: { 'line-color': day ? '#7c88b0' : '#5b6a9a', 'line-width': 8, 'line-opacity': .75 } });
   map.addLayer({ id: 'trail-line', type: 'line', source: 'trail', layout: lay, paint: { 'line-color': day ? '#4caf00' : '#a3ff12', 'line-width': 5, 'line-opacity': .85, 'line-blur': .5 } });
   map.addLayer({ id: 'history-glow', type: 'line', source: 'history', layout: lay, paint: { 'line-color': '#ff2bd6', 'line-width': 18, 'line-blur': 10, 'line-opacity': day ? .25 : .45 } });
@@ -103,6 +113,10 @@ map.on('style.load', () => {
     new maplibregl.Popup({ offset: 14 }).setLngLat(f.geometry.coordinates)
       .setHTML(`<div class="font-bold">📸 ${L('Fester Blitzer')}</div><div class="text-xs text-slate-400">${L('Quelle')}: OpenStreetMap${ms ? ` · Limit ${esc(ms)} km/h` : ''}</div>`).addTo(map);
   });
+
+  map.on('click', 'bikeroutes-line', e => onBikeRouteClick(e));
+  map.on('mouseenter', 'bikeroutes-line', () => map.getCanvas().style.cursor = 'pointer');
+  map.on('mouseleave', 'bikeroutes-line', () => map.getCanvas().style.cursor = '');
 
   map.on('click', 'alts-line', e => {
     const f = e.features && e.features[0];

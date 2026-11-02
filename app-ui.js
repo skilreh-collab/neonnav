@@ -64,7 +64,7 @@ function renderGauge() {
 const SPEEDO_ARC = 574.9; // 270° von r = 122
 let speedoOpen = false, speedoMax = 240;
 // Skalenende passend zum Fahrzeug
-const speedoScale = () => vehicle.kind === 'foot' ? 20 : vehicle.kind === 'bike' ? 50 : vehicle.kind === 'ebike' ? 60 : 240;
+const speedoScale = () => vehicle.kind === 'foot' ? 20 : vehicle.kind === 'scooter' ? 40 : vehicle.kind === 'bike' ? 50 : vehicle.kind === 'ebike' ? 60 : 240;
 const speedoAngle = v => 135 + 270 * clamp(v / speedoMax, 0, 1);
 function buildSpeedoTicks() {
   speedoMax = speedoScale();
@@ -330,6 +330,8 @@ $('placeModal').onclick = e => { if (e.target.id === 'placeModal') closePlaceCar
 $('favModal').onclick = e => { if (e.target.id === 'favModal') closeFavModal(); };
 $('goBtn').onclick = startNav;
 $('freeBtn').onclick = startFree;
+$('exploreStart').onclick = startExplore;
+renderExploreBtn();
 $('endBtn').onclick = () => { if (confirm(S.mode === 'nav' ? L('Navigation beenden?') : L('Freie Fahrt beenden und speichern?'))) endDrive('manual'); };
 $('reportCamBtn').onclick = () => report('blitzer');
 $('reportHazBtn').onclick = () => report('gefahr');
@@ -349,8 +351,14 @@ $('modelSel').onchange = () => {
   const v = $('modelSel').value;
   if (v === '__custom') { draft.model = L('Eigenes Fahrzeug'); return; }
   const hit = modelList(draft.kind, draft.fuel, draft.brand).find(([n]) => n === v);
-  if (hit) { draft.model = hit[0]; draft.cons = hit[1]; $('consInput').value = fmtDec(hit[1]); }
+  if (hit) {
+    draft.model = hit[0]; draft.cons = hit[1]; $('consInput').value = fmtDec(hit[1]);
+    if (hit[2]) { draft.batt = hit[2]; $('battInput').value = hit[2]; }
+    if (!$('battWrap').classList.contains('hidden')) renderRangeInfo();
+  }
 };
+['battInput', 'chargeInput', 'consInput'].forEach(id => $(id).addEventListener('input', () => { if (!$('battWrap').classList.contains('hidden')) renderRangeInfo(); }));
+$('chargeFull').onclick = () => { $('chargeInput').value = 100; renderRangeInfo(); };
 $('brandSel').onchange = () => {
   draft.brand = $('brandSel').value;
   const list = modelList('car', draft.fuel, draft.brand);

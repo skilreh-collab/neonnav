@@ -57,6 +57,7 @@ function onFix(f) {
   ghostTick();
   renderGauge();
   renderFreeStats();
+  if (S.exploring) exploreTick();
   camera();
 }
 
@@ -66,6 +67,7 @@ function onFix(f) {
 function startTrip(label) {
   // tl: Zeitverlauf [ms seit Start, gefahrene Meter] – Grundlage fürs Ghost-Rennen
   S.trip = { start: Date.now(), label, coords: [], tl: [], distance: 0, max: 0, xpAcc: 0, overSec: 0 };
+  if (isLightEV(vehicle)) S.trip.startCharge = vehicle.charge != null ? vehicle.charge : 100;
   if (S.pos) { S.trip.coords.push([r5(S.pos.lng), r5(S.pos.lat)]); S.trip.tl.push([0, 0]); }
   setSrc('trail', emptyFC());
   nativePost({ type: 'trip', on: true });
@@ -432,6 +434,24 @@ function renderCostLine(avgPlan, totalPlan) {
   let right = `<span class="truncate">${esc(vehicleLabel(tv))}</span>`;
   if (totalPlan && !isFree(tv)) right = `${L('Ziel')} ≈ <b class="font-game text-white">${costFor(totalPlan, avgPlan, tv).text}</b>`;
   $('costLine').innerHTML = `<span>${left}</span><span class="text-right">${right}</span>`;
+  renderRangeLine();
+}
+// E-Bike / E-Roller: Rest-Reichweite live – und ob sie bis zum Ziel reicht
+function renderRangeLine() {
+  const el = $('rangeLine'), T = S.trip, tv = tripVehicle();
+  const start = T && T.startCharge != null ? T.startCharge : null;
+  if (!T || start == null || !isLightEV(tv)) { el.classList.add('hidden'); return; }
+  const charge = Math.max(0, start - chargeUsed(T.distance, tv)), left = rangeKm(tv, charge);
+  const toGo = S.mode === 'nav' && S.nav ? Math.max(0, S.nav.total - S.nav.along) / 1000 : null;
+  let cls = 'text-lime-300', msg = `🔋 ${Math.round(charge)} % · ${L('noch ~{km} km', { km: fmtKm(left) })}`;
+  if (toGo != null) {
+    if (left >= toGo * 1.1) msg += ` · ${L('reicht bis zum Ziel ✓')}`;
+    else if (left >= toGo) { cls = 'text-amber-300'; msg += ` · ${L('wird knapp')}`; }
+    else { cls = 'text-red-300'; msg += ` · ${L('reicht nicht – {km} km fehlen', { km: fmtKm(toGo - left) })}`; }
+  } else if (left < 5) cls = 'text-red-300';
+  else if (left < 12) cls = 'text-amber-300';
+  el.className = `mt-2 px-1 text-sm font-bold ${cls}`;
+  el.textContent = msg;
 }
 function updateNextHazard() {
   const el = $('hazNext');

@@ -63,6 +63,19 @@ async function setDestination(place) {
   }
 }
 
+// E-Bike / E-Roller: reicht der Akku für die Strecke – und für Hin und Zurück?
+function evRouteLine(m) {
+  if (S.dest && S.dest.walk) return '';
+  const left = rangeKm(vehicle);
+  if (left == null) return '';
+  const km = m / 1000, charge = vehicle.charge != null ? vehicle.charge : 100;
+  const one = left >= km, both = left >= km * 2;
+  const tone = both ? 'text-lime-300' : one ? 'text-amber-300' : 'text-red-300';
+  const txt = !one ? L('Akku reicht nicht – {km} km fehlen', { km: fmtKm(km - left) })
+    : both ? L('Reicht hin und zurück ohne Laden ✓')
+    : L('Reicht hin – für zurück nachladen');
+  return `<div class="text-xs font-bold mt-1 ${tone}">🔋 ${Math.round(charge)} % · ~${fmtKm(left)} km · ${txt}</div>`;
+}
 function drawPreview(fit) {
   if (!S.routes.length) return;
   const sel = S.routes[S.routeIdx];
@@ -73,6 +86,7 @@ function drawPreview(fit) {
 
   $('routeCards').innerHTML = S.routes.map((r, i) => {
     const on = i === S.routeIdx, hz = r.routeHaz.length, c = costFor(r.total, (r.total / 1000) / (r.duration / 3600), tripVehicle());
+    const ev = evRouteLine(r.total);
     // im kleinen Feld bleibt nur die gewählte Route sichtbar
     return `<button data-idx="${i}" ${on ? '' : 'data-extra'} class="route-card w-full text-left rounded-2xl p-3 border ${on ? 'border-cyan-300 bg-cyan-400/10' : 'border-slate-700 bg-black/30'}">
       <div class="flex justify-between items-baseline gap-2">
@@ -82,6 +96,7 @@ function drawPreview(fit) {
       <div class="mt-1 flex justify-between gap-2 text-sm"><span class="font-game font-bold text-lime-300">💶 ${c.text}</span><span class="text-xs text-slate-400 self-center">${c.extra}</span></div>
       <div class="text-xs text-slate-400 mt-1">${L('Ankunft')} ${timeStr(new Date(Date.now() + r.duration * 1000))}${i === 0 ? ` · <span class="text-lime-300">${L('Schnellste')}</span>` : ''} ·
         ${hz ? `<span class="text-red-300">📸 ${L(hz > 1 ? '{n} Meldungen auf der Strecke' : '{n} Meldung auf der Strecke', { n: hz })}</span>` : L('keine Meldungen')}</div>
+      ${ev}
     </button>`;
   }).join('');
   document.querySelectorAll('.route-card').forEach(b => b.onclick = () => selectRoute(+b.dataset.idx));
@@ -141,20 +156,22 @@ function startFree() {
   unlockAudio();
   if (S.viewTrip) closeTripView();
   S.nav = null;
-  startTrip('Freie Fahrt');
+  // Erkunden-Modus (app-explore.js) ist eine freie Fahrt mit Radrouten und Kacheln
+  const ex = !!S.exploring;
+  startTrip(ex ? 'Erkunden' : 'Freie Fahrt');
   maybeRefreshPrices();
   S.follow = true; S.camZoom = null; $('recenterBtn').classList.remove('active-ring');
-  $('manIcon').innerHTML = '<span style="font-size:34px">🚗</span>';
-  $('manDist').textContent = L('FREIE FAHRT');
+  $('manIcon').innerHTML = `<span style="font-size:34px">${ex ? kindInfo(vehicle.kind).icon : '🚗'}</span>`;
+  $('manDist').textContent = ex ? L('ERKUNDEN') : L('FREIE FAHRT');
   $('manDist').style.fontSize = '24px';
-  $('manText').textContent = L('Blitzerwarner aktiv');
-  $('manStreet').textContent = L('Strecke wird aufgezeichnet');
+  $('manText').textContent = ex ? L('Radrouten werden geladen…') : L('Blitzerwarner aktiv');
+  $('manStreet').textContent = ex ? L('{n} neue Kacheln', { n: 0 }) : L('Strecke wird aufgezeichnet');
   $('manNext').classList.add('hidden');
   renderLanes(null, 0);
   setMode('free');
   renderFreeStats();
   requestWakeLock();
-  speak(L('Freie Fahrt. Blitzerwarner ist aktiv.'));
+  speak(ex ? L('Erkunden-Modus. Ich zeige dir Radrouten und neue Gegenden.') : L('Freie Fahrt. Blitzerwarner ist aktiv.'));
   camera();
   S.freeBannerTimer = setTimeout(flyBannerIntoCar, 3500);
 }
@@ -198,9 +215,16 @@ function resetFreeBanner() {
 
 function endDrive(reason) {
   const wasNav = S.mode === 'nav', dest = S.dest, walk = !!(dest && dest.walk);
+  const evTrip = S.trip && S.trip.startCharge != null && !walk ? { start: S.trip.startCharge, m: S.trip.distance } : null;
   const trip = finishTrip();
+  // E-Bike / E-Roller: Ladestand um den Verbrauch der Fahrt senken
+  if (evTrip && isLightEV(vehicle)) {
+    vehicle.charge = Math.max(0, Math.round((evTrip.start - chargeUsed(evTrip.m)) * 10) / 10);
+    store.set(LS.vehicle, vehicle);
+  }
   const ghostMsg = reason === 'arrived' && trip && dest && !walk ? ghostFinish(dest, trip) : '';
   ghostStop();
+  stopExplore();
   S.nav = null; S.dest = null; S.routes = []; S.start = null;
   setDestMarker(null);
   setSrc('route', emptyFC()); setSrc('alts', emptyFC());
