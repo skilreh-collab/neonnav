@@ -157,3 +157,9 @@ body.sheet-moving #rail .rail-btn { pointer-events:none; }
 .speedo-tile { border-radius:16px; background:rgba(9,11,28,.85); border:1px solid rgba(0,229,255,.2); padding:8px 4px; text-align:center; }
 .speedo-tv { font:900 19px Inter, sans-serif; color:#fff; font-variant-numeric:tabular-nums; white-space:nowrap; }
 .speedo-tl { margin-top:1px; font:800 10px Inter, sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#94a3b8; }
+
+/* Rundtour: Längen-Auswahl */
+.loop-chip { height:58px; border-radius:16px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:0;
+             background:rgba(0,229,255,.08); border:1px solid rgba(0,229,255,.35); color:#e6f0ff; transition:transform .1s; }
+.loop-chip:active { transform:scale(.94); }
+.loop-chip.tight { background:rgba(251,191,36,.08); border-color:rgba(251,191,36,.5); color:#fde68a; }

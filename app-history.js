@@ -125,7 +125,7 @@ function renderStats() {
   const maxV = cur.reduce((a, t) => Math.max(a, t.max || 0), 0), avg = ms > 0 ? km / (ms / 3600000) : 0;
   const delta = kmPrev > 0 ? Math.round((km - kmPrev) / kmPrev * 100) : null;
   const dests = {};
-  cur.forEach(t => { const l = t.label || ''; if (l && !/^(Freie Fahrt|Erkunden|Navigation)$/.test(l) && !t.walk) dests[l] = (dests[l] || 0) + 1; });
+  cur.forEach(t => { const l = t.label || ''; if (l && !/^(Freie Fahrt|Erkunden|Navigation|Rundtour .*)$/.test(l) && !t.walk) dests[l] = (dests[l] || 0) + 1; });
   const top = Object.entries(dests).sort((a, b) => b[1] - a[1]).slice(0, 3);
   const isNow = statMonth.getFullYear() === now.getFullYear() && statMonth.getMonth() === now.getMonth();
   const tile = (v, l, cls = 'text-white') => `<div class="rounded-2xl bg-slate-900/80 border border-slate-800 p-3"><div class="font-game text-xl font-black ${cls}">${v}</div><div class="text-[10px] uppercase tracking-wider text-slate-500">${l}</div></div>`;

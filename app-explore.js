@@ -164,7 +164,120 @@ function stopExplore() {
 }
 // Erkunden-Knopf nur für Fahrrad, E-Bike und E-Roller
 function renderExploreBtn() {
-  const on = canExplore(vehicle);
-  $('exploreStart').classList.toggle('hidden', !on);
-  $('driveBtns').classList.toggle('grid-cols-2', on);
+  $('bikeBtns').classList.toggle('hidden', !canExplore(vehicle));
+}
+
+/* =================================================================
+   RUNDTOUR (BRouter plant die Runde, OSRM liefert die Abbiegehinweise)
+   ================================================================= */
+const BROUTER = 'https://brouter.de/brouter';
+const LOOP_KM = Array.from({ length: 15 }, (_, i) => 10 + i * 5); // 10, 15, … 80 km
+let loopDir = Math.floor(Math.random() * 360);
+
+// OSRM-Route über mehrere Punkte (Fahrrad-Profil), ohne Alternativen
+async function fetchViaRoute(points) {
+  let lastErr;
+  const coords = points.map(p => `${p.lng.toFixed(6)},${p.lat.toFixed(6)}`).join(';');
+  for (const base of ROUTERS.bike) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 15000);
+    try {
+      const r = await fetch(`${base}${coords}?overview=full&geometries=geojson&steps=true&continue_straight=true`, { signal: ctl.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json();
+      if (j.code !== 'Ok' || !j.routes || !j.routes.length) throw new Error(j.message || L('Keine Route gefunden'));
+      return j.routes[0];
+    } catch (e) { lastErr = e.name === 'AbortError' ? new Error(L('Zeitüberschreitung')) : e; }
+    finally { clearTimeout(timer); }
+  }
+  throw lastErr;
+}
+// Route als Runde kennzeichnen und die Zwischenpunkte mit ihrer Position entlang der Route merken
+function markLoop(N, vias) {
+  N.loop = true;
+  N.vias = vias.map(v => { const sn = snapToRoute(N, v.lat, v.lng, true); return { lat: v.lat, lng: v.lng, along: sn ? sn.along : 0 }; })
+    .sort((a, b) => a.along - b.along);
+  return N;
+}
+// BRouter-Rundkurs holen; der Parameter wirkt etwa wie Länge ÷ 5 – einmal nachjustieren, falls die Runde zu kurz/lang ist
+async function brouterLoop(from, km, dir) {
+  const target = km * 1000;
+  let rt = target / 5, best = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 25000);
+    try {
+      const url = `${BROUTER}?lonlats=${from.lng.toFixed(5)},${from.lat.toFixed(5)}&profile=trekking&alternativeidx=0&format=geojson` +
+        `&engineMode=4&roundTripDistance=${Math.round(rt)}&direction=${Math.round(dir)}`;
+      const r = await fetch(url, { signal: ctl.signal });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      const j = await r.json(), f = j.features && j.features[0];
+      if (!f) throw new Error(L('Keine Route gefunden'));
+      const len = +f.properties['track-length'] || lineLen(f.geometry.coordinates);
+      if (!best || Math.abs(len - target) < Math.abs(best.len - target)) best = { len, coords: f.geometry.coordinates };
+      if (Math.abs(len - target) / target < .12) break;
+      rt *= target / len;
+    } catch (e) { if (!best && attempt === 2) throw e; if (e.name === 'AbortError' && !best) throw new Error(L('Zeitüberschreitung')); }
+    finally { clearTimeout(timer); }
+  }
+  if (!best) throw new Error(L('Keine Route gefunden'));
+  return best;
+}
+// Ganze Rundtour planen: Runde von BRouter, daraus ~10 Zwischenpunkte für die Navigation mit Ansagen
+async function planRoundTrip(from, km, dir) {
+  const loop = await brouterLoop(from, km, dir);
+  const c = loop.coords, cum = [0];
+  for (let i = 1; i < c.length; i++) cum[i] = cum[i - 1] + haversine(c[i - 1][1], c[i - 1][0], c[i][1], c[i][0]);
+  const total = cum[cum.length - 1], n = 10, vias = [];
+  for (let k = 1; k <= n; k++) {
+    const want = total * k / (n + 1);
+    let i = cum.findIndex(x => x >= want); if (i < 0) i = c.length - 1;
+    vias.push({ lng: c[i][0], lat: c[i][1] });
+  }
+  const route = await fetchViaRoute([from].concat(vias, [from]));
+  return markLoop(prepareNav(route), vias);
+}
+
+/* --- Auswahl der Länge und Vorschau --- */
+function openLoopPicker() {
+  if (!S.pos) { toast(L('Kein Standort – bitte GPS erlauben, dann erneut wählen.')); return; }
+  const range = rangeKm(vehicle);
+  $('loopChips').innerHTML = LOOP_KM.map(km => {
+    const tight = range != null && km > range;
+    return `<button data-km="${km}" class="loop-chip ${tight ? 'tight' : ''}"><span class="font-game font-black text-lg">${km}</span><span class="text-[10px]">${tight ? '🔋!' : 'km'}</span></button>`;
+  }).join('');
+  $('loopChips').querySelectorAll('button').forEach(b => b.onclick = () => { closeLoopPicker(); showRoundTrip(+b.dataset.km); });
+  $('loopRange').innerHTML = range != null
+    ? `🔋 ${L('Dein Akku reicht für ~{km} km', { km: fmtKm(range) })}${LOOP_KM.some(k => k > range) ? ` · <span class="text-amber-300">${L('längere Runden sind markiert')}</span>` : ''}`
+    : '';
+  $('loopModal').classList.remove('hidden');
+}
+function closeLoopPicker() { $('loopModal').classList.add('hidden'); }
+
+async function showRoundTrip(km, newDir) {
+  if (S.mode === 'nav' || S.mode === 'free') { toast(L('Erst die aktuelle Fahrt beenden')); return; }
+  if (!S.pos) { toast(L('Kein Standort – bitte GPS erlauben, dann erneut wählen.')); return; }
+  if (newDir) loopDir = (loopDir + 100 + Math.random() * 80) % 360; // „Andere Runde“: deutlich andere Richtung
+  if (S.viewTrip) closeTripView();
+  S.start = null;
+  const from = { lat: S.pos.lat, lng: S.pos.lng };
+  S.dest = { name: L('Rundtour {km} km', { km }), sub: L('Start und Ziel: dein Standort'), lat: from.lat, lng: from.lng, loop: true, loopKm: km, here: true };
+  setDestMarker(null); setStartMarker(null);
+  renderFavBtn();
+  $('destName').textContent = S.dest.name;
+  $('destSub').textContent = S.dest.sub;
+  $('destFrom').classList.add('hidden');
+  $('routeCards').innerHTML = `<div class="text-center text-slate-400 py-4 font-game text-sm blink">${L('PLANE RUNDTOUR…')}</div>`;
+  $('goBtn').disabled = true;
+  clearFuelStations(); S.routeWx = null;
+  setMode('preview');
+  renderRouteExtras();
+  try {
+    const N = await planRoundTrip(from, km, loopDir);
+    if (S.mode !== 'preview' || !S.dest || !S.dest.loop) return;
+    S.routes = [N]; S.routeIdx = 0;
+    $('goBtn').disabled = false;
+    drawPreview(true);
+    routeWeather(N);
+  } catch (e) {
+    if (S.mode === 'preview') $('routeCards').innerHTML = `<div class="text-center text-red-300 py-3 text-sm">${L('Rundtour gerade nicht verfügbar ({e}). Später erneut versuchen.', { e: esc(e.message) })}</div>`;
+  }
 }

@@ -119,7 +119,8 @@ const PRESETS = {
   'moto:benzin': [['Vespa / Roller 125', 2.5], ['Yamaha MT-07', 4.3], ['Honda CB500', 3.6], ['KTM 390 Duke', 3.4], ['BMW R 1250 GS', 4.8], ['Harley-Davidson Softail', 5.6]],
   'moto:electric': [['E-Roller (45 km/h)', 4.0], ['Zero SR/F', 9.0]],
   // E-Bikes & E-Roller: [Modell, kWh/100 km, Akku in Wh] – Verbrauch im mittleren Unterstützungsmodus
-  'ebike:electric': [['Pedelec / E-Bike (500 Wh)', 1.0, 500], ['Pedelec / E-Bike (625 Wh)', 1.0, 625], ['Pedelec / E-Bike (750 Wh)', 1.05, 750],
+  // Fatbike: breite Reifen rollen schwerer – mehr Verbrauch als ein normales E-Bike
+  'ebike:electric': [['E-Fatbike W66 (625 Wh)', 1.4, 625], ['Pedelec / E-Bike (500 Wh)', 1.0, 500], ['Pedelec / E-Bike (625 Wh)', 1.0, 625], ['Pedelec / E-Bike (750 Wh)', 1.05, 750],
                      ['City-E-Bike (400 Wh)', 0.9, 400], ['E-Mountainbike (625 Wh)', 1.3, 625], ['E-Mountainbike (750 Wh)', 1.35, 750],
                      ['Lasten-E-Bike (545 Wh)', 1.4, 545], ['S-Pedelec (45 km/h, 625 Wh)', 2.0, 625]],
   'scooter:electric': [['Xiaomi Electric Scooter 4 Pro', 1.6, 446], ['Xiaomi Electric Scooter 4', 1.5, 275], ['Segway Ninebot Max G30D', 1.5, 551],

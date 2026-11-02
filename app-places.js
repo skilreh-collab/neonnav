@@ -69,6 +69,12 @@ function evRouteLine(m) {
   const left = rangeKm(vehicle);
   if (left == null) return '';
   const km = m / 1000, charge = vehicle.charge != null ? vehicle.charge : 100;
+  if (S.dest && S.dest.loop) {
+    const ok = left >= km, tone = left >= km * 1.15 ? 'text-lime-300' : ok ? 'text-amber-300' : 'text-red-300';
+    const txt = ok ? (left >= km * 1.15 ? L('Akku reicht für die ganze Runde ✓') : L('Akku reicht knapp für die Runde'))
+      : L('Akku reicht nicht – {km} km fehlen', { km: fmtKm(km - left) });
+    return `<div class="text-xs font-bold mt-1 ${tone}">🔋 ${Math.round(charge)} % · ~${fmtKm(left)} km · ${txt}</div>`;
+  }
   const one = left >= km, both = left >= km * 2;
   const tone = both ? 'text-lime-300' : one ? 'text-amber-300' : 'text-red-300';
   const txt = !one ? L('Akku reicht nicht – {km} km fehlen', { km: fmtKm(km - left) })
@@ -375,7 +381,11 @@ function closeFavModal() { $('favModal').classList.add('hidden'); favTarget = nu
 function renderFavBtn() {
   const f = S.dest && favAt(S.dest);
   $('favBtn').textContent = f ? FAV_ICON[f.type] : '☆';
-  $('favBtn').classList.toggle('hidden', !!(S.dest && S.dest.walk));
+  const loop = !!(S.dest && S.dest.loop);
+  $('favBtn').classList.toggle('hidden', !!(S.dest && S.dest.walk) || loop);
+  // Rundtour: statt „Tauschen“ gibt es „Andere Runde“
+  $('swapBtn').classList.toggle('hidden', loop);
+  $('reloopBtn').classList.toggle('hidden', !loop);
 }
 function goFav(f) {
   setDestination(f.type === 'fav' ? { name: f.name, sub: f.sub, lat: f.lat, lng: f.lng } : { name: FAV_LABEL[f.type], sub: f.name, lat: f.lat, lng: f.lng });

@@ -226,7 +226,9 @@ function prepareNav(route) {
   const coords = route.geometry.coordinates, cum = [0];
   for (let i = 1; i < coords.length; i++) cum[i] = cum[i - 1] + haversine(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0]);
   const total = cum[cum.length - 1] || 1;
-  const steps = route.legs.flatMap(l => l.steps);
+  // Bei Routen über Zwischenpunkte (Rundtour) die „Ankunft/Abfahrt“ an jedem Zwischenpunkt weglassen
+  const legs = route.legs, steps = legs.flatMap((l, li) => l.steps.filter(s =>
+    !(li < legs.length - 1 && s.maneuver.type === 'arrive') && !(li > 0 && s.maneuver.type === 'depart')));
   const sumSteps = steps.reduce((a, s) => a + s.distance, 0) || 1, k = total / sumSteps;
   const stepStart = [];
   let acc = 0;
@@ -242,7 +244,9 @@ function snapToRoute(N, lat, lng, full) {
   const c = N.coords;
   if (c.length < 2) return null;
   const kx = 111320 * Math.cos(lat * toR), ky = 110540;
-  const from = full ? 0 : Math.max(0, N.lastIdx - 10), to = full ? c.length - 1 : Math.min(c.length - 1, N.lastIdx + 400);
+  // Rundtour: Anfang und Ende liegen übereinander – nur kurz voraus suchen, sonst springt die Position ans Ende
+  const ahead = N.loop ? 60 : 400;
+  const from = full ? 0 : Math.max(0, N.lastIdx - 10), to = full ? c.length - 1 : Math.min(c.length - 1, N.lastIdx + ahead);
   let best = { dist: Infinity, idx: null, t: 0 };
   for (let i = from; i < to; i++) {
     const ax = (c[i][0] - lng) * kx, ay = (c[i][1] - lat) * ky, bx = (c[i + 1][0] - lng) * kx, by = (c[i + 1][1] - lat) * ky;
@@ -251,7 +255,11 @@ function snapToRoute(N, lat, lng, full) {
     const d = Math.hypot(ax + t * dx, ay + t * dy);
     if (d < best.dist) best = { dist: d, idx: i, t };
   }
-  if (!full && best.dist > 80) { const b2 = snapToRoute(N, lat, lng, true); if (b2 && b2.dist < best.dist) best = b2; }
+  if (!full && best.dist > 80) {
+    const b2 = snapToRoute(N, lat, lng, true);
+    // bei einer Runde nicht über den halben Kreis nach vorn springen
+    if (b2 && b2.dist < best.dist && !(N.loop && b2.along - N.along > N.total * .3)) best = b2;
+  }
   if (best.idx == null) return null;
   const a = c[best.idx], b = c[best.idx + 1];
   best.along = N.cum[best.idx] + best.t * (N.cum[best.idx + 1] - N.cum[best.idx]);
@@ -302,7 +310,7 @@ function updateNav(f) {
   let ni = N.steps.length - 1;
   for (let i = 1; i < N.steps.length; i++) if (N.stepStart[i] > N.along + 3) { ni = i; break; }
 
-  if (remain < 30) { arrived(); return sn; }
+  if (remain < 30 && (!N.loop || N.along > N.total * .6)) { arrived(); return sn; }
   const d = Math.max(0, N.stepStart[ni] - N.along);
   renderManeuver(N, ni, d);
   renderNavStats(N, remain);
@@ -481,11 +489,15 @@ async function reroute() {
   if (!S.rerouteFails) speak(L('Route wird neu berechnet'));
   $('manText').textContent = S.rerouteFails ? L('Kein Netz – neuer Versuch…') : L('Neuberechnung…');
   try {
-    const routes = await fetchRoutes(S.pos, S.dest);
+    // Rundtour: zurück auf die Runde (über die restlichen Zwischenpunkte), nicht direkt nach Hause
+    const loop = S.nav && S.nav.loop ? S.nav : null;
+    const routes = loop ? [await fetchViaRoute([S.pos].concat(loop.vias.filter(v => v.along > loop.along + 300), [S.dest]))]
+      : await fetchRoutes(S.pos, S.dest);
     if (S.mode !== 'nav') return;
     if (S.rerouteFails) speak(L('Neue Route gefunden'));
     S.rerouteFails = 0;
     S.nav = prepareNav(routes[0]);
+    if (loop) markLoop(S.nav, loop.vias.filter(v => v.along > loop.along + 300).map(v => ({ lat: v.lat, lng: v.lng })));
     setRouteOnMap(S.nav);
     loadCamsAlongRoutes([S.nav]);
     loadLimitsAlongRoute(S.nav);
