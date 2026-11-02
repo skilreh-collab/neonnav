@@ -7,24 +7,28 @@
    ================================================================= */
 const visibleSheet = () => [...document.querySelectorAll('.sheet')].find(e => !e.classList.contains('hidden'));
 function sheetHeight() { const el = visibleSheet(); return el ? el.offsetHeight : 0; }
-// Höhe des Feldes in der kleinen Stufe – daran hängen Tacho und Seitenleiste, damit sie beim
-// Ziehen oder Aufklappen eines Feldes stehen bleiben (das große Feld schiebt sich darüber)
-function baseSheetHeight() {
-  const el = visibleSheet();
-  if (!el) return 0;
-  const panel = el.firstElementChild, pad = el.offsetHeight - panel.offsetHeight;
-  // Start-Feld: der aufklappbare Teil wird einfach abgezogen (Messen würde seine Animation stören)
-  if (el.id === 'browseSheet') return pad + panel.offsetHeight - $('sheetMore').offsetHeight;
-  return pad + (isCompact(el) ? panel.offsetHeight : measureSheet(el, true));
+// Tacho und Seitenleiste sitzen immer über dem Feld, damit nichts verdeckt wird. Während ein Feld
+// gezogen wird oder auf-/zuklappt, blenden sie kurz aus und tauchen danach an der neuen Stelle auf.
+let ctrlHideTimer = 0;
+function hideControlsWhileSheetMoves(ms) {
+  document.body.classList.add('sheet-moving');
+  clearTimeout(ctrlHideTimer);
+  if (ms) ctrlHideTimer = setTimeout(showControlsAfterSheetMove, ms);
+}
+function showControlsAfterSheetMove() {
+  clearTimeout(ctrlHideTimer);
+  document.body.classList.remove('sheet-moving');
+  layout();
 }
 function layout() {
   const el = visibleSheet();
-  // während das Feld gezogen wird oder einrastet, bleibt alles andere, wo es ist
-  if (el && (el.classList.contains('dragging') || el.firstElementChild.classList.contains('sheet-panel-anim'))) return;
-  const h = sheetHeight(), base = baseSheetHeight();
-  $('rail').style.bottom = `${base + 12}px`;
-  $('gauge').style.bottom = `${base + 12}px`;
+  const moving = document.body.classList.contains('sheet-moving') ||
+    (el && (el.classList.contains('dragging') || el.firstElementChild.classList.contains('sheet-panel-anim')));
+  const h = sheetHeight();
   document.documentElement.style.setProperty('--sheet-h', `${h + (S.mode === 'preview' ? 10 : 130)}px`);
+  if (moving) return; // Position erst setzen, wenn das Feld steht
+  $('rail').style.bottom = `${h + 12}px`;
+  $('gauge').style.bottom = `${h + 12}px`;
 }
 function setMode(m) {
   S.mode = m;
@@ -53,7 +57,69 @@ function renderGauge() {
   $('gSpeed').textContent = stale ? '–' : Math.round(v);
   $('gArc').setAttribute('stroke-dasharray', `${(Math.min(1, v / 200) * 197.9).toFixed(1)} 999`);
   $('gMax').textContent = S.trip ? `MAX ${Math.round(S.trip.max)}` : '';
+  if (speedoOpen) renderSpeedo();
 }
+
+/* --- Großer Tacho: Antippen der Geschwindigkeit --- */
+const SPEEDO_ARC = 574.9; // 270° von r = 122
+let speedoOpen = false, speedoMax = 240;
+// Skalenende passend zum Fahrzeug
+const speedoScale = () => vehicle.kind === 'foot' ? 20 : vehicle.kind === 'bike' ? 50 : vehicle.kind === 'ebike' ? 60 : 240;
+const speedoAngle = v => 135 + 270 * clamp(v / speedoMax, 0, 1);
+function buildSpeedoTicks() {
+  speedoMax = speedoScale();
+  const major = speedoMax <= 20 ? 5 : speedoMax <= 60 ? 10 : 20, minor = major / 2;
+  let out = '';
+  for (let v = 0; v <= speedoMax + .01; v += minor) {
+    const a = speedoAngle(v) * Math.PI / 180, big = Math.abs(v % major) < .01;
+    const r1 = big ? 100 : 106, r2 = 113;
+    const x1 = 150 + r1 * Math.cos(a), y1 = 150 + r1 * Math.sin(a), x2 = 150 + r2 * Math.cos(a), y2 = 150 + r2 * Math.sin(a);
+    out += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${big ? '#e6f0ff' : 'rgba(165,243,252,.45)'}" stroke-width="${big ? 3 : 1.6}" stroke-linecap="round"/>`;
+    if (big) {
+      const tx = 150 + 84 * Math.cos(a), ty = 150 + 84 * Math.sin(a) + 4.5;
+      out += `<text x="${tx.toFixed(1)}" y="${ty.toFixed(1)}" text-anchor="middle" font-size="13" font-weight="800" fill="#cbd5e1" font-family="Orbitron, Inter, sans-serif">${Math.round(v)}</text>`;
+    }
+  }
+  $('speedoTicks').innerHTML = out;
+}
+function renderSpeedo() {
+  const stale = !S.pos || Date.now() - S.lastFixAt > 8000, v = stale ? 0 : S.speed;
+  const lim = S.limit && !S.limit.none ? S.limit.v : null, over = lim != null && v > lim + 3;
+  $('speedoVal').textContent = stale ? '–' : Math.round(v);
+  $('speedoVal').classList.toggle('over', over);
+  $('speedoArc').setAttribute('stroke-dasharray', `${(clamp(v / speedoMax, 0, 1) * SPEEDO_ARC).toFixed(1)} 999`);
+  $('speedoNeedle').style.transform = `rotate(${speedoAngle(v).toFixed(1)}deg)`;
+  $('speedoDir').textContent = (COMPASS_DIRS[LANG] || COMPASS_DIRS.en)[Math.round((((S.heading || 0) % 360) + 360) % 360 / 45) % 8];
+  // Tempolimit: Schild oben rechts und rote Marke auf der Skala
+  $('speedoLimit').classList.toggle('hidden', !S.limit);
+  if (S.limit) $('speedoLimit').textContent = S.limit.none ? '∞' : S.limit.v;
+  if (lim != null && lim <= speedoMax) {
+    const a = speedoAngle(lim) * Math.PI / 180;
+    $('speedoLimitMark').innerHTML = `<line x1="${(150 + 96 * Math.cos(a)).toFixed(1)}" y1="${(150 + 96 * Math.sin(a)).toFixed(1)}"
+      x2="${(150 + 131 * Math.cos(a)).toFixed(1)}" y2="${(150 + 131 * Math.sin(a)).toFixed(1)}" stroke="#ff1744" stroke-width="5" stroke-linecap="round" filter="url(#spGlow)"/>`;
+  } else $('speedoLimitMark').innerHTML = '';
+  // Fahrtwerte
+  const T = S.trip, el = T ? Date.now() - T.start : 0;
+  $('spMax').textContent = T ? Math.round(T.max) : '–';
+  $('spAvg').textContent = T && el > 5000 ? Math.round((T.distance / 1000) / (el / 3600000)) : '–';
+  $('spDist').textContent = T ? (T.distance / 1000).toFixed(1).replace('.', DEC) : '–';
+  $('spTime').textContent = T ? fmtClock(el) : '–';
+}
+function openSpeedo() {
+  buildSpeedoTicks();
+  speedoOpen = true;
+  $('speedoModal').classList.remove('hidden');
+  // Nadel von 0 aus hochschwingen lassen
+  $('speedoNeedle').style.transform = `rotate(135deg)`;
+  $('speedoArc').setAttribute('stroke-dasharray', '0 999');
+  requestAnimationFrame(() => requestAnimationFrame(renderSpeedo));
+}
+function closeSpeedo() { speedoOpen = false; $('speedoModal').classList.add('hidden'); }
+$('gauge').onclick = openSpeedo;
+$('speedoClose').onclick = closeSpeedo;
+$('speedoModal').onclick = e => { if (e.target.id === 'speedoModal') closeSpeedo(); };
+// zwischen den GPS-Positionen die Fahrzeit weiterzählen
+setInterval(() => { if (speedoOpen) renderSpeedo(); }, 1000);
 function renderFreeStats() {
   if (S.mode !== 'free' || !S.trip) return;
   const el = Date.now() - S.trip.start;
@@ -92,6 +158,7 @@ document.addEventListener('visibilitychange', () => {
 // Erster Tipp klappt Favoriten & Co. auf, zweiter Tipp öffnet die Suche
 let sheetOpen = false;
 function setSheetOpen(on) {
+  if (on !== sheetOpen && !$('browseSheet').classList.contains('hidden')) hideControlsWhileSheetMoves(340);
   sheetOpen = on;
   $('sheetMore').classList.toggle('open', on);
   $('sheetToggle').querySelector('svg').style.transform = on ? 'rotate(180deg)' : '';
@@ -113,6 +180,7 @@ const sheetPanel = el => el.firstElementChild;
 const isCompact = el => el.id === 'browseSheet' ? !sheetOpen : el.classList.contains('compact');
 function setCompact(el, on) {
   if (el.id === 'browseSheet') { setSheetOpen(!on); return; }
+  if (on !== el.classList.contains('compact')) hideControlsWhileSheetMoves(260);
   el.classList.toggle('compact', on);
   sheetPref[SHEET_KEY[el.id]] = on;
   store.set(LS.sheets, sheetPref);
@@ -147,6 +215,7 @@ function initSheetDrag(el) {
       const hMin = measureSheet(el, true), hMax = measureSheet(el, false), h0 = panel.offsetHeight;
       drag = { hMin, hMax, h0, h: h0, lastY: e.clientY, lastT: performance.now(), v: 0 };
       el.classList.add('dragging');
+      hideControlsWhileSheetMoves(0);
       if (el.id === 'browseSheet') $('sheetMore').classList.add('open'); else el.classList.remove('compact');
       panel.style.overflow = 'hidden';
       panel.style.height = `${h0}px`;
@@ -179,7 +248,7 @@ function initSheetDrag(el) {
       panel.style.height = ''; panel.style.overflow = '';
       void panel.offsetHeight;
       el.classList.remove('measuring');
-      layout();
+      setTimeout(showControlsAfterSheetMove, 60);
     };
     let done = false;
     const once = () => { if (!done) { done = true; finish(); } };

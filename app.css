@@ -134,5 +134,26 @@ html[data-theme=day] .maplibregl-ctrl-attrib-button { filter:none; }
 .rail-recenter { position:absolute; right:62px; bottom:0; }
 .rail-recenter:not(.active-ring) { display:none; }
 
-/* Felder liegen über Tacho und Seitenleiste, wenn sie großgezogen werden */
-#browseSheet, #previewSheet, #driveSheet { z-index:25; }
+/* Tacho & Seitenleiste blenden kurz aus, während ein Feld gezogen wird oder auf-/zuklappt */
+#gauge, #rail { transition:opacity .18s ease; }
+body.sheet-moving #gauge, body.sheet-moving #rail { opacity:0; pointer-events:none; }
+body.sheet-moving #rail .rail-btn { pointer-events:none; }
+
+/* Großer Tacho */
+.speedo-wrap { background:radial-gradient(circle at 50% 40%, rgba(124,58,237,.28), rgba(5,6,15,.94) 60%); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+.speedo-card { animation:speedoIn .35s cubic-bezier(.2,.9,.3,1.1); }
+@keyframes speedoIn { from { transform:scale(.85); opacity:0; } to { transform:scale(1); opacity:1; } }
+.speedo-dial { position:relative; width:min(88vw, 380px); aspect-ratio:1; margin:6px auto 0; }
+.speedo-svg { width:100%; height:100%; display:block; filter:drop-shadow(0 0 24px rgba(0,229,255,.25)); }
+.speedo-needle { transform-box:view-box; transform-origin:150px 150px; transition:transform .7s cubic-bezier(.2,.8,.2,1); }
+.speedo-readout { position:absolute; left:0; right:0; top:58%; text-align:center; pointer-events:none; }
+.speedo-val { font:900 clamp(54px, 17vw, 76px)/1 Orbitron, Inter, sans-serif; color:#fff; font-variant-numeric:tabular-nums;
+              text-shadow:0 0 18px rgba(0,229,255,.8), 0 2px 3px rgba(0,0,0,.9); }
+.speedo-val.over { color:#fb7185; text-shadow:0 0 20px rgba(251,113,133,.9); animation:blink .6s infinite; }
+.speedo-unit { margin-top:2px; font:800 13px Inter, sans-serif; letter-spacing:.25em; color:#a5f3fc; }
+.speedo-dir { margin-top:6px; font:900 15px Inter, sans-serif; color:#ff8ae6; letter-spacing:.1em; }
+.speedo-limit { position:absolute; right:4%; top:4%; width:62px; height:62px; border-radius:50%; background:#fff; border:7px solid #e11d48;
+                display:grid; place-items:center; color:#000; font:900 21px Orbitron, Inter, sans-serif; box-shadow:0 4px 18px rgba(0,0,0,.6); }
+.speedo-tile { border-radius:16px; background:rgba(9,11,28,.85); border:1px solid rgba(0,229,255,.2); padding:8px 4px; text-align:center; }
+.speedo-tv { font:900 19px Inter, sans-serif; color:#fff; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.speedo-tl { margin-top:1px; font:800 10px Inter, sans-serif; letter-spacing:.12em; text-transform:uppercase; color:#94a3b8; }

@@ -50,7 +50,13 @@ const map = new maplibregl.Map({
   container: 'map', style: MAP_STYLES[curTheme], center: [10.45, 51.16], zoom: 5,
   attributionControl: false, maxPitch: 70, dragRotate: true, touchPitch: true
 });
-map.addControl(new maplibregl.AttributionControl({ compact: true, customAttribution: L('Routing © OSRM · Suche © Nominatim') }), 'bottom-left');
+// Nur der Pflicht-Hinweis der Kartendaten (OpenStreetMap/CARTO-Lizenz) als kleines ⓘ – immer zugeklappt
+map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+const collapseAttrib = () => document.querySelectorAll('.maplibregl-ctrl-attrib.maplibregl-compact-show').forEach(el => {
+  el.classList.remove('maplibregl-compact-show'); el.removeAttribute('open');
+});
+map.on('load', collapseAttrib);
+map.on('styledata', () => setTimeout(collapseAttrib, 0));
 
 let mapReady = false, styleErrShown = false;
 map.on('error', e => {

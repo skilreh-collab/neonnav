@@ -67,7 +67,6 @@ window.NN_I18N = {
     "In {d} günstig tanken bei {name}: {e} Euro {c}.": ["In {d}, cheap fuel at {name}: {e} euros {c}.", "En {d}, gasolina barata en {name}: {e} euros {c}.", "Dans {d}, carburant pas cher chez {name} : {e} euros {c}.", "Tra {d}, carburante conveniente da {name}: {e} euro {c}.", "{d} sonra {name} istasyonunda uygun yakıt: {e} avro {c}."],
 
     // --- Karte & Orte ---
-    "Routing © OSRM · Suche © Nominatim": ["Routing © OSRM · Search © Nominatim", "Rutas © OSRM · Búsqueda © Nominatim", "Itinéraires © OSRM · Recherche © Nominatim", "Percorsi © OSRM · Ricerca © Nominatim", "Rota © OSRM · Arama © Nominatim"],
     "Karte konnte nicht geladen werden – Internet prüfen": ["Map could not be loaded – check your internet connection", "No se pudo cargar el mapa: comprueba tu conexión", "Impossible de charger la carte – vérifie ta connexion", "Impossibile caricare la mappa – controlla la connessione", "Harita yüklenemedi – internet bağlantını kontrol et"],
     "Fester Blitzer": ["Fixed speed camera", "Radar fijo", "Radar fixe", "Autovelox fisso", "Sabit radar"],
     "Quelle": ["Source", "Fuente", "Source", "Fonte", "Kaynak"],
@@ -460,6 +459,7 @@ window.NN_I18N = {
     "Kein Netz – neuer Versuch…": ["No signal – retrying…", "Sin señal – reintentando…", "Pas de réseau – nouvel essai…", "Nessun segnale – nuovo tentativo…", "Sinyal yok – yeniden deneniyor…"],
     "Neue Route gefunden": ["New route found", "Nueva ruta encontrada", "Nouvel itinéraire trouvé", "Nuovo percorso trovato", "Yeni rota bulundu"],
     "Neuberechnung fehlgeschlagen – ich versuche es weiter": ["Rerouting failed – I'll keep trying", "Error al recalcular – sigo intentándolo", "Échec du recalcul – je réessaie", "Ricalcolo non riuscito – continuo a provare", "Yeniden hesaplama başarısız – denemeye devam ediyorum"],
+    "Tacho öffnen": ["Open speedometer", "Abrir velocímetro", "Ouvrir le compteur", "Apri tachimetro", "Hız göstergesini aç"],
     "Werkzeuge": ["Tools", "Herramientas", "Outils", "Strumenti", "Araçlar"],
     // --- Start & Ziel ---
     "📍 Mein Standort": ["📍 My location", "📍 Mi ubicación", "📍 Ma position", "📍 La mia posizione", "📍 Konumum"],

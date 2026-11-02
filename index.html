@@ -127,7 +127,7 @@
      style="top:calc(max(10px, env(safe-area-inset-top)) + 70px);transform:translate(-50%,8px);background:#e6f0ff;color:#05060f;box-shadow:0 0 24px rgba(0,229,255,.5)"></div>
 
 <!-- ===================== Tacho ===================== -->
-<div id="gauge" class="fixed left-3 z-20 w-[108px] h-[108px] rounded-full panel">
+<div id="gauge" class="fixed left-3 z-20 w-[108px] h-[108px] rounded-full panel cursor-pointer" role="button" aria-label="Tacho öffnen">
   <svg viewBox="0 0 100 100" class="absolute inset-0 w-full h-full">
     <defs>
       <linearGradient id="gGrad" x1="0" y1="1" x2="1" y2="0">
@@ -402,6 +402,53 @@
     </div>
     <button id="favRemove" class="hidden mt-2 w-full h-11 rounded-xl bg-slate-800 text-red-300 font-semibold text-sm">🗑 Aus Favoriten entfernen</button>
     <button id="favCancel" class="mt-2 w-full h-11 rounded-xl bg-slate-800 font-semibold text-sm">Abbrechen</button>
+  </div>
+</div>
+
+<!-- ===================== Großer Tacho (Antippen der Geschwindigkeit) ===================== -->
+<div id="speedoModal" class="hidden fixed inset-0 z-50 speedo-wrap modal-wrap flex items-center justify-center">
+  <div class="speedo-card w-full max-w-md">
+    <div class="flex items-center justify-between px-1">
+      <div class="font-game text-sm font-black neon-text tracking-[.3em]">TACHO</div>
+      <button id="speedoClose" class="h-11 w-11 rounded-full bg-slate-800/80 text-xl" aria-label="Schließen">✕</button>
+    </div>
+    <div class="speedo-dial">
+      <svg viewBox="0 0 300 300" class="speedo-svg">
+        <defs>
+          <linearGradient id="spGrad" x1="0" y1="1" x2="1" y2="0">
+            <stop offset="0" stop-color="#00e5ff"/><stop offset=".55" stop-color="#a855f7"/><stop offset="1" stop-color="#ff2bd6"/>
+          </linearGradient>
+          <radialGradient id="spFace" cx="50%" cy="50%" r="50%">
+            <stop offset="0" stop-color="#111633"/><stop offset=".75" stop-color="#070918"/><stop offset="1" stop-color="#03040c"/>
+          </radialGradient>
+          <filter id="spGlow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <circle cx="150" cy="150" r="146" fill="url(#spFace)" stroke="rgba(0,229,255,.25)" stroke-width="1.5"/>
+        <circle cx="150" cy="150" r="122" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="14" stroke-linecap="round"
+                stroke-dasharray="574.9 999" transform="rotate(135 150 150)"/>
+        <circle id="speedoArc" cx="150" cy="150" r="122" fill="none" stroke="url(#spGrad)" stroke-width="14" stroke-linecap="round"
+                stroke-dasharray="0 999" transform="rotate(135 150 150)" filter="url(#spGlow)" style="transition:stroke-dasharray .7s cubic-bezier(.2,.8,.2,1)"/>
+        <g id="speedoTicks"></g>
+        <g id="speedoLimitMark"></g>
+        <g id="speedoNeedle" class="speedo-needle">
+          <polygon points="150,145 258,150 150,155" fill="#fff" filter="url(#spGlow)"/>
+          <polygon points="150,147 258,150 150,153" fill="#ff2bd6"/>
+        </g>
+        <circle cx="150" cy="150" r="13" fill="#0b0e22" stroke="#00e5ff" stroke-width="3" filter="url(#spGlow)"/>
+      </svg>
+      <div class="speedo-readout">
+        <div id="speedoVal" class="speedo-val">0</div>
+        <div class="speedo-unit">km/h</div>
+        <div id="speedoDir" class="speedo-dir"></div>
+      </div>
+      <div id="speedoLimit" class="speedo-limit hidden"></div>
+    </div>
+    <div class="grid grid-cols-4 gap-2 mt-2">
+      <div class="speedo-tile"><div id="spMax" class="speedo-tv">–</div><div class="speedo-tl">MAX</div></div>
+      <div class="speedo-tile"><div id="spAvg" class="speedo-tv">–</div><div class="speedo-tl">Ø km/h</div></div>
+      <div class="speedo-tile"><div id="spDist" class="speedo-tv">–</div><div class="speedo-tl">km</div></div>
+      <div class="speedo-tile"><div id="spTime" class="speedo-tv">–</div><div class="speedo-tl">Zeit</div></div>
+    </div>
   </div>
 </div>
 
