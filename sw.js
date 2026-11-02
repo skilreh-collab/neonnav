@@ -1,9 +1,9 @@
 // NeonNav Service Worker – macht die App installierbar und offline startfähig
-const VERSION = 'neonnav-v8';
+const VERSION = 'neonnav-v9';
 const TILE_CACHE = 'neonnav-tiles-v1';
 const MAX_TILES = 2500;
 
-const SHELL = ['./', './index.html', './cars.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
+const SHELL = ['./', './index.html', './cars.js', './i18n.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png'];
 const CDN = [
   'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js',
   'https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css',
