@@ -68,7 +68,7 @@ const srcCache = {};
 let firstStyle = true;
 map.on('style.load', () => {
   styleTweaks();
-  ['explore', 'cells', 'bikeroutes', 'alts', 'route', 'trail', 'history', 'cams'].forEach(id => {
+  ['explore', 'cells', 'bikeroutes', 'alts', 'route', 'trail', 'history', 'traffic', 'cams'].forEach(id => {
     if (!map.getSource(id)) map.addSource(id, { type: 'geojson', data: srcCache[id] || emptyFC(), lineMetrics: id === 'route' });
   });
   const lay = { 'line-cap': 'round', 'line-join': 'round' };
@@ -95,6 +95,16 @@ map.on('style.load', () => {
   map.addLayer({ id: 'route-glow', type: 'line', source: 'route', layout: lay, paint: { 'line-color': '#00e5ff', 'line-width': 22, 'line-blur': 12, 'line-opacity': day ? .3 : .45 } });
   map.addLayer({ id: 'route-line', type: 'line', source: 'route', layout: lay, paint: { 'line-width': 9, 'line-gradient': routeGradient(S.nav && S.nav.total ? (S.nav.along || 0) / S.nav.total : 0) } });
 
+  // Verkehrslage (Autobahn GmbH): Stau rot, stockend orange, Sperrung dunkelrot, Baustelle gelb gestrichelt
+  map.addLayer({ id: 'traffic-glow', type: 'line', source: 'traffic', layout: lay, filter: ['==', ['geometry-type'], 'LineString'], paint: {
+    'line-color': ['get', 'color'], 'line-width': 16, 'line-blur': 9, 'line-opacity': .5 } });
+  map.addLayer({ id: 'traffic-line', type: 'line', source: 'traffic', layout: lay, filter: ['all', ['==', ['geometry-type'], 'LineString'], ['!=', ['get', 'kind'], 'works']], paint: {
+    'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 4, 15, 9] } });
+  map.addLayer({ id: 'traffic-works', type: 'line', source: 'traffic', layout: { 'line-join': 'round' }, filter: ['all', ['==', ['geometry-type'], 'LineString'], ['==', ['get', 'kind'], 'works']], paint: {
+    'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['zoom'], 8, 3, 15, 7], 'line-dasharray': [1.2, 1] } });
+  map.addLayer({ id: 'traffic-dot', type: 'circle', source: 'traffic', filter: ['==', ['geometry-type'], 'Point'], paint: {
+    'circle-radius': 8, 'circle-color': ['get', 'color'], 'circle-stroke-color': '#fff', 'circle-stroke-width': 2 } });
+
   // Echte Blitzer (OpenStreetMap) als performanter Kartenlayer
   map.addLayer({ id: 'cams-glow', type: 'circle', source: 'cams', minzoom: 9, paint: {
     'circle-radius': ['interpolate', ['linear'], ['zoom'], 9, 5, 16, 20], 'circle-color': '#ff1744', 'circle-blur': 1, 'circle-opacity': .55 } });
@@ -115,6 +125,11 @@ map.on('style.load', () => {
   });
 
   map.on('click', 'bikeroutes-line', e => onBikeRouteClick(e));
+  ['traffic-line', 'traffic-works', 'traffic-dot'].forEach(id => {
+    map.on('click', id, e => onTrafficClick(e));
+    map.on('mouseenter', id, () => map.getCanvas().style.cursor = 'pointer');
+    map.on('mouseleave', id, () => map.getCanvas().style.cursor = '');
+  });
   map.on('mouseenter', 'bikeroutes-line', () => map.getCanvas().style.cursor = 'pointer');
   map.on('mouseleave', 'bikeroutes-line', () => map.getCanvas().style.cursor = '');
 

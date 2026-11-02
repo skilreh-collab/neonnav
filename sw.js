@@ -1,16 +1,17 @@
 // NeonNav Service Worker – macht die App installierbar und offline startfähig
-const VERSION = 'neonnav-v19';
+const VERSION = 'neonnav-v20';
 const TILE_CACHE = 'neonnav-tiles-v1';
 const MAX_TILES = 2500;
 
 const SHELL = ['./', './index.html', './cars.js', './i18n.js', './manifest.webmanifest', './icon-180.png', './icon-192.png', './icon-512.png',
                './maplibre-gl.js', './maplibre-gl.css', './tailwind.css', './app.css',
                './app-core.js', './app-map.js', './app-vehicle.js', './app-live.js', './app-drive.js',
-               './app-places.js', './app-history.js', './app-explore.js', './app-ui.js'];
+               './app-places.js', './app-history.js', './app-explore.js', './app-traffic.js', './app-ui.js',
+               './inter-latin.woff2', './inter-latin-ext.woff2', './orbitron-latin.woff2'];
 // Live-Daten nie aus dem Cache: Routing, Suche, Blitzer, Spritpreise, Wetter
 const LIVE_HOSTS = ['routing.openstreetmap.de', 'router.project-osrm.org', 'nominatim.openstreetmap.org',
                     'overpass-api.de', 'overpass.kumi.systems', 'maps.mail.ru', 'overpass.private.coffee',
-                    'creativecommons.tankerkoenig.de', 'api.open-meteo.com', 'brouter.de'];
+                    'creativecommons.tankerkoenig.de', 'api.open-meteo.com', 'brouter.de', 'verkehr.autobahn.de'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(VERSION).then(async c => {
@@ -42,8 +43,8 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Kartenkacheln, Stil, Schriften: aus dem Cache, im Hintergrund aktualisieren
-  if (/cartocdn\.com|fonts\.(googleapis|gstatic)\.com/.test(url.hostname)) {
+  // Kartenkacheln & Kartenstil: aus dem Cache, im Hintergrund aktualisieren
+  if (/cartocdn\.com/.test(url.hostname)) {
     e.respondWith(caches.open(TILE_CACHE).then(async c => {
       const hit = await c.match(req);
       const net = fetch(req).then(r => { if (r.ok || r.type === 'opaque') { c.put(req, r.clone()); if (Math.random() < .05) trimTiles(); } return r; }).catch(() => hit);

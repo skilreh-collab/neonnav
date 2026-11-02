@@ -58,6 +58,8 @@ async function setDestination(place) {
     if (!place.walk) routeFuel(S.routes[0]);
     const navs = S.routes;
     loadCamsAlongRoutes(navs).then(() => { if (S.mode === 'preview' && S.routes === navs) { navs.forEach(computeRouteHazards); drawPreview(false); } });
+    // Verkehrslage je Route; ist eine Alternative trotz Stau schneller, wird sie vorgeschlagen
+    loadTrafficForRoutes(navs).then(() => { if (S.mode === 'preview' && S.routes === navs) { recommendByTraffic(navs); drawPreview(false); } }).catch(() => {});
   } catch (e) {
     $('routeCards').innerHTML = `<div class="text-center text-red-300 py-3 text-sm">${L('Route nicht verfügbar ({e}). Später erneut versuchen.', { e: esc(e.message) })}</div>`;
   }
@@ -92,7 +94,7 @@ function drawPreview(fit) {
 
   $('routeCards').innerHTML = S.routes.map((r, i) => {
     const on = i === S.routeIdx, hz = r.routeHaz.length, c = costFor(r.total, (r.total / 1000) / (r.duration / 3600), tripVehicle());
-    const ev = evRouteLine(r.total);
+    const ev = evRouteLine(r.total) + trafficRouteLine(r);
     // im kleinen Feld bleibt nur die gewählte Route sichtbar
     return `<button data-idx="${i}" ${on ? '' : 'data-extra'} class="route-card w-full text-left rounded-2xl p-3 border ${on ? 'border-cyan-300 bg-cyan-400/10' : 'border-slate-700 bg-black/30'}">
       <div class="flex justify-between items-baseline gap-2">
@@ -106,6 +108,7 @@ function drawPreview(fit) {
     </button>`;
   }).join('');
   document.querySelectorAll('.route-card').forEach(b => b.onclick = () => selectRoute(+b.dataset.idx));
+  showTraffic(sel.traffic || []);
 
   if (fit) requestAnimationFrame(() => fitCoords(S.routes.flatMap(r => [r.coords[0], r.coords[r.coords.length - 1]]).concat(sel.coords.filter((c, i) => i % 20 === 0))));
 }
@@ -124,6 +127,7 @@ function swapRoute() {
 function cancelPreview() {
   S.start = null;
   S.dest = null; S.routes = []; S.routeWx = null;
+  showTraffic(areaTraffic.on ? areaTraffic.items : []);
   clearFuelStations();
   setDestMarker(null);
   setSrc('route', emptyFC()); setSrc('alts', emptyFC());
@@ -137,7 +141,8 @@ function startNav() {
   unlockAudio();
   const N = S.routes[S.routeIdx];
   N.along = 0; N.lastIdx = 0; N.announced = {}; N.offCount = 0;
-  S.nav = N; S.rerouteFails = 0;
+  S.nav = N; S.rerouteFails = 0; N.trafficSaid = {};
+  showTraffic(N.traffic || []);
   setSrc('alts', emptyFC());
   setRouteOnMap(N);
   computeRouteHazards(N);
@@ -175,6 +180,8 @@ function startFree() {
   $('manNext').classList.add('hidden');
   renderLanes(null, 0);
   setMode('free');
+  // Auto/Motorrad: Verkehrslage der Umgebung automatisch einblenden und Staus voraus ansagen
+  if (!ex && trafficOn() && !areaTraffic.on) setAreaTraffic(true);
   renderFreeStats();
   requestWakeLock();
   speak(ex ? L('Erkunden-Modus. Ich zeige dir Radrouten und neue Gegenden.') : L('Freie Fahrt. Blitzerwarner ist aktiv.'));
@@ -231,6 +238,8 @@ function endDrive(reason) {
   const ghostMsg = reason === 'arrived' && trip && dest && !walk ? ghostFinish(dest, trip) : '';
   ghostStop();
   stopExplore();
+  closeDetour();
+  showTraffic(areaTraffic.on ? areaTraffic.items : []);
   S.nav = null; S.dest = null; S.routes = []; S.start = null;
   setDestMarker(null);
   setSrc('route', emptyFC()); setSrc('alts', emptyFC());

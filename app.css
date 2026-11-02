@@ -1,4 +1,8 @@
 /* NeonNav – eigene Stile (Tailwind-Klassen kommen aus tailwind.css) */
+/* Schriften lokal (SIL Open Font License) – kein Abruf bei Google */
+@font-face { font-family:'Inter'; font-style:normal; font-weight:400 800; font-display:swap; src:url(inter-latin.woff2) format('woff2'); unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family:'Inter'; font-style:normal; font-weight:400 800; font-display:swap; src:url(inter-latin-ext.woff2) format('woff2'); unicode-range:U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C4, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family:'Orbitron'; font-style:normal; font-weight:600 900; font-display:swap; src:url(orbitron-latin.woff2) format('woff2'); unicode-range:U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 :root { --neon:#00e5ff; --pink:#ff2bd6; --lime:#a3ff12; --bg:#05060f; --panel:rgba(9,11,28,.88); --sheet-h:200px; }
 html, body { height:100%; margin:0; background:var(--bg); overflow:hidden; overscroll-behavior:none; -webkit-tap-highlight-color:transparent; }
 body { font-family:Inter, system-ui, -apple-system, sans-serif; color:#e6f0ff; }
@@ -163,3 +167,6 @@ body.sheet-moving #rail .rail-btn { pointer-events:none; }
              background:rgba(0,229,255,.08); border:1px solid rgba(0,229,255,.35); color:#e6f0ff; transition:transform .1s; }
 .loop-chip:active { transform:scale(.94); }
 .loop-chip.tight { background:rgba(251,191,36,.08); border-color:rgba(251,191,36,.5); color:#fde68a; }
+
+/* Ausweichroute-Vorschlag */
+.detour-box { background:linear-gradient(135deg,#0b2a3a,#2a0b3a); border-color:#00e5ff; box-shadow:0 0 40px rgba(0,229,255,.45); }

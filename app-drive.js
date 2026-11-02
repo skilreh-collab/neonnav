@@ -58,6 +58,7 @@ function onFix(f) {
   renderGauge();
   renderFreeStats();
   if (S.exploring) exploreTick();
+  freeTrafficTick();
   camera();
 }
 
@@ -314,6 +315,7 @@ function updateNav(f) {
   const d = Math.max(0, N.stepStart[ni] - N.along);
   renderManeuver(N, ni, d);
   renderNavStats(N, remain);
+  trafficTick(N);
   if (mapReady && map.getLayer('route-line')) map.setPaintProperty('route-line', 'line-gradient', routeGradient(N.along / N.total));
   voiceLogic(N, ni, d);
   checkFuelAhead(N);
@@ -424,7 +426,8 @@ function renderManeuver(N, ni, d) {
   } else { $('manNext').classList.add('hidden'); }
 }
 function renderNavStats(N, remain) {
-  const sec = N.duration * (remain / N.total);
+  // Ankunftszeit inkl. gemeldetem Stau-Zeitverlust auf dem Rest der Strecke
+  const sec = N.duration * (remain / N.total) + trafficDelayAhead(N) * 60;
   $('d1').textContent = timeStr(new Date(Date.now() + sec * 1000)); $('d1l').textContent = L('Ankunft');
   const m = Math.round(sec / 60);
   if (m >= 60) { $('d2').textContent = `${Math.floor(m / 60)}:${String(m % 60).padStart(2, '0')}`; $('d2l').textContent = L('Std'); }
@@ -498,6 +501,8 @@ async function reroute() {
     S.rerouteFails = 0;
     S.nav = prepareNav(routes[0]);
     if (loop) markLoop(S.nav, loop.vias.filter(v => v.along > loop.along + 300).map(v => ({ lat: v.lat, lng: v.lng })));
+    const RN = S.nav;
+    loadTrafficForRoutes([RN]).then(() => { if (S.nav === RN) showTraffic(RN.traffic || []); }).catch(() => {});
     setRouteOnMap(S.nav);
     loadCamsAlongRoutes([S.nav]);
     loadLimitsAlongRoute(S.nav);
