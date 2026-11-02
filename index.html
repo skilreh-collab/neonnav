@@ -2,6 +2,15 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
+  <!-- Sicherheitsregel: Code nur aus der App selbst, Daten nur von den bekannten Diensten.
+       Neue Dienste müssen hier unter connect-src ergänzt werden, sonst blockiert der Browser sie. -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';
+    font-src 'self'; img-src 'self' data: blob: https://basemaps.cartocdn.com https://tiles.basemaps.cartocdn.com;
+    worker-src 'self' blob:; child-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'; frame-src 'none';
+    connect-src 'self' https://basemaps.cartocdn.com https://tiles.basemaps.cartocdn.com
+      https://routing.openstreetmap.de https://router.project-osrm.org https://brouter.de https://nominatim.openstreetmap.org
+      https://overpass-api.de https://maps.mail.ru https://overpass.kumi.systems https://overpass.private.coffee
+      https://creativecommons.tankerkoenig.de https://api.open-meteo.com https://verkehr.autobahn.de">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <meta name="theme-color" content="#05060f">
   <meta name="apple-mobile-web-app-capable" content="yes">
