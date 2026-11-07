@@ -220,8 +220,8 @@ function renderHistory() {
       </button>
       <button class="t-del w-12 rounded-2xl bg-slate-900 border border-slate-800 text-xl" aria-label="${L('Löschen')}">🗑</button>`;
     row.querySelector('.t-open').onclick = () => { closeHistory(); showTrip(t); };
-    row.querySelector('.t-del').onclick = () => {
-      if (!confirm(L('Diese Fahrt löschen?'))) return;
+    row.querySelector('.t-del').onclick = async () => {
+      if (!(await ask(L('Diese Fahrt löschen?'), L('Löschen')))) return;
       store.set(LS.trips, store.get(LS.trips, []).filter(x => x.id !== t.id));
       if (S.viewTrip && S.viewTrip.id === t.id) closeTripView();
       renderHistory();

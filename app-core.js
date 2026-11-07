@@ -131,6 +131,22 @@ function toast(msg) {
   toastT = setTimeout(() => { el.style.opacity = '0'; el.style.transform = 'translate(-50%,8px)'; }, 2800);
 }
 const vibrate = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+// Eigene Rückfrage statt confirm(): in der iOS-App (WKWebView) liefert confirm() sonst immer „Abbrechen“.
+// Gibt ein Promise<boolean> zurück; Tippen neben den Dialog = Abbrechen.
+function ask(msg, yes = L('Ja'), danger = true) {
+  return new Promise(res => {
+    const m = $('confirmModal'), y = $('confirmYes'), n = $('confirmNo');
+    $('confirmText').textContent = msg;
+    y.textContent = yes;
+    y.className = 'h-12 rounded-xl font-bold text-sm ' + (danger ? 'bg-red-600 text-white' : 'bg-cyan-300 text-black');
+    const done = v => { m.classList.add('hidden'); y.onclick = n.onclick = m.onclick = null; res(v); };
+    y.onclick = () => done(true);
+    n.onclick = () => done(false);
+    m.onclick = e => { if (e.target === m) done(false); };
+    m.classList.remove('hidden');
+    setTimeout(() => n.focus(), 50);
+  });
+}
 
 /* =================================================================
    ZUSTAND
@@ -139,6 +155,6 @@ const S = {
   mode: 'browse',          // browse | preview | nav | free
   pos: null, lastFixAt: 0, speed: 0, heading: 0,
   follow: true, view3d: store.get(LS.view, true),
-  dest: null, routes: [], routeIdx: 0, nav: null, trip: null,
+  dest: null, vias: [], routes: [], routeIdx: 0, nav: null, trip: null,
   viewTrip: null, camZoom: null, rerouting: false, firstFix: true
 };

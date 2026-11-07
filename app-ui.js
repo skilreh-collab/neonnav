@@ -46,7 +46,7 @@ function setMode(m) {
   if (!driving) { $('hazNext').classList.add('hidden'); hideAlarm(); S.limit = null; renderLimit(false); }
   if (m === 'browse') renderFavChips(); else setSheetOpen(false);
   if (m === 'free') { $('d1l').textContent = L('Zeit'); $('d2l').textContent = 'km'; $('d3l').textContent = 'Ø km/h'; }
-  if (driving) $('driveDest').textContent = m === 'nav' && S.dest ? `🏁 ${S.dest.name}` : `🛣️ ${L('Freie Fahrt')}`;
+  if (driving) $('driveDest').textContent = m === 'nav' && S.dest ? `🏁 ${S.dest.name}${S.vias.length ? ` · 📍 ${S.vias.length}` : ''}` : `🛣️ ${L('Freie Fahrt')}`;
   setRailOpen(false);
   layout();
   if (S.pos) checkHazards();
@@ -296,15 +296,23 @@ $('rail').addEventListener('pointerup', e => {
   railSwiped = true; setTimeout(() => { railSwiped = false; }, 350);
   setRailOpen(open);
 });
-$('searchClose').onclick = () => { closeSearch(); if (S.mode !== 'preview') S.start = null; };
-// Start- und Zielfeld teilen sich die Trefferliste; das zuletzt fokussierte Feld bekommt den gewählten Ort
-['startInput', 'searchInput'].forEach(id => {
-  const inp = $(id), target = id === 'startInput' ? 'start' : 'dest';
+$('searchClose').onclick = () => {
+  closeSearch();
+  if (S.mode !== 'preview') { S.start = null; S.vias = []; }
+  // Start oder Zwischenziele geändert: angezeigte Route neu berechnen
+  else if (searchDirty && S.dest) setDestination(S.dest);
+};
+$('viaAdd').onclick = addViaField;
+$('viaBtn').onclick = () => openSearch(true);
+// Start-, Zwischenziel- und Zielfeld teilen sich die Trefferliste; das zuletzt fokussierte Feld bekommt den gewählten Ort
+const SEARCH_FIELDS = { startInput: 'start', viaInput: 'via', searchInput: 'dest' };
+Object.keys(SEARCH_FIELDS).forEach(id => {
+  const inp = $(id), target = SEARCH_FIELDS[id];
   inp.addEventListener('focus', () => {
     if (searchTarget === target) return;
     searchTarget = target; searchSeq++; clearTimeout(searchTimer);
-    const q = inp.value.trim();
-    if (q.length >= 3 && !(target === 'start' && S.start && q === S.start.name)) doSearch(q); else renderRecentsList();
+    const q = inp.value.trim(), chosen = target === 'start' ? S.start : target === 'dest' ? S.dest : null;
+    if (q.length >= 3 && !(chosen && q === chosen.name)) doSearch(q); else renderRecentsList();
   });
   inp.addEventListener('input', () => {
     searchTarget = target;
@@ -339,7 +347,10 @@ $('loopClose').onclick = closeLoopPicker;
 $('loopModal').onclick = e => { if (e.target.id === 'loopModal') closeLoopPicker(); };
 $('reloopBtn').onclick = () => { if (S.dest && S.dest.loop) showRoundTrip(S.dest.loopKm, true); };
 renderExploreBtn();
-$('endBtn').onclick = () => { if (confirm(S.mode === 'nav' ? L('Navigation beenden?') : L('Freie Fahrt beenden und speichern?'))) endDrive('manual'); };
+$('endBtn').onclick = async () => {
+  const ok = await ask(S.mode === 'nav' ? L('Navigation beenden?') : L('Freie Fahrt beenden und speichern?'), L('Beenden'));
+  if (ok && (S.mode === 'nav' || S.mode === 'free')) endDrive('manual');
+};
 $('reportCamBtn').onclick = () => report('blitzer');
 $('reportHazBtn').onclick = () => report('gefahr');
 $('historyBtn').onclick = openHistory;
@@ -395,9 +406,9 @@ $('recenterBtn').onclick = () => {
   S.follow = true; S.camZoom = null; $('recenterBtn').classList.remove('active-ring');
   if (S.pos) camera(); else toast(L('Noch kein Standort'));
 };
-$('clearHazBtn').onclick = () => {
+$('clearHazBtn').onclick = async () => {
   if (!hazards.length) { toast(L('Keine Meldungen gespeichert')); return; }
-  if (!confirm(L('Alle {n} Meldungen löschen?', { n: hazards.length }))) return;
+  if (!(await ask(L('Alle {n} Meldungen löschen?', { n: hazards.length }), L('Löschen')))) return;
   hazards = []; store.set(LS.haz, hazards); alertStage.clear(); renderHazards(); hideAlarm(); renderHistory();
 };
 

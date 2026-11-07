@@ -202,6 +202,7 @@ const hazLabel = h => h.type === 'gefahr' ? L('Gefahrenstelle') : L('Blitzer');
 function renderHazards() {
   hazMarkers.forEach(m => m.remove());
   hazMarkers.clear();
+  pulsingHaz = null;
   for (const h of allHaz()) {
     const el = document.createElement('div');
     el.className = 'haz-mk' + (h.type === 'gefahr' ? ' haz-g' : '');
@@ -354,7 +355,18 @@ function checkHazards() {
   } else hideAlarm();
   updateNextHazard();
 }
+// Nur der Marker der aktuellen Warnung pulsiert (eigene Meldungen; OSM-Blitzer haben keinen eigenen Marker)
+let pulsingHaz = null;
+function setHazPulse(id) {
+  if (pulsingHaz === id) return;
+  const old = pulsingHaz != null && hazMarkers.get(pulsingHaz);
+  if (old) old.getElement().classList.remove('near');
+  pulsingHaz = id;
+  const m = id != null && hazMarkers.get(id);
+  if (m) m.getElement().classList.add('near');
+}
 function showAlarm(h, d, over) {
+  setHazPulse(h.id);
   $('alarmIcon').textContent = h.type === 'gefahr' ? '⚠️' : '📸';
   $('alarmTitle').textContent = h.type === 'gefahr' ? L('GEFAHRENSTELLE') : L('BLITZER');
   $('alarmDist').textContent = Math.round(d);
@@ -366,6 +378,7 @@ function showAlarm(h, d, over) {
   $('gSpeed').style.color = '#ff4d6d';
 }
 function hideAlarm() {
+  setHazPulse(null);
   $('alarm').classList.add('hidden');
   $('driveCard').classList.remove('sheet-alarm');
   $('gSpeed').style.color = '';

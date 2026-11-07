@@ -48,7 +48,9 @@ setInterval(applyTheme, 60000);
 
 const map = new maplibregl.Map({
   container: 'map', style: MAP_STYLES[curTheme], center: [10.45, 51.16], zoom: 5,
-  attributionControl: false, maxPitch: 70, dragRotate: true, touchPitch: true
+  attributionControl: false, maxPitch: 70, dragRotate: true, touchPitch: true,
+  // Akku: höchstens 2× Auflösung – auf 3×-Displays kaum sichtbar, aber ~55 % weniger Pixel pro Bild
+  pixelRatio: Math.min(window.devicePixelRatio || 1, 2)
 });
 // Nur der Pflicht-Hinweis der Kartendaten (OpenStreetMap/CARTO-Lizenz) als kleines ⓘ – immer zugeklappt
 map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
@@ -369,9 +371,11 @@ let puckAdded = false, puckState = null, puckAnim = 0;
 
 function movePuck(lat, lng, hdg) {
   if (!puckAdded) { puck.setLngLat([lng, lat]).setRotation(hdg).addTo(map); puckAdded = true; puckState = { lat, lng, hdg }; return; }
-  const from = puckState;
-  if (haversine(from.lat, from.lng, lat, lng) > 500) { puck.setLngLat([lng, lat]).setRotation(hdg); puckState = { lat, lng, hdg }; return; }
+  const from = puckState, moved = haversine(from.lat, from.lng, lat, lng);
+  if (moved > 500) { puck.setLngLat([lng, lat]).setRotation(hdg); puckState = { lat, lng, hdg }; return; }
   const dh = ((hdg - from.hdg + 540) % 360) - 180, t0 = performance.now(), D = 950;
+  // Akku: im Stand (GPS-Zittern) keine Animation starten
+  if (moved < 1 && Math.abs(dh) < 1) return;
   cancelAnimationFrame(puckAnim);
   const step = now => {
     const k = Math.min(1, (now - t0) / D);
@@ -404,6 +408,10 @@ function camera(instant) {
     pitch = S.view3d ? 45 : 0;
     bearing = S.view3d ? map.getBearing() : 0;
   }
+  // Akku: hat sich kaum etwas geändert (Stand, Ampel, GPS-Zittern), Karte nicht neu zeichnen lassen
+  const c = map.getCenter(), db = Math.abs(((bearing - map.getBearing() + 540) % 360) - 180);
+  if (!instant && !map.isMoving() && haversine(c.lat, c.lng, S.pos.lat, S.pos.lng) < 3 && db < 2
+      && Math.abs(zoom - map.getZoom()) < .05 && Math.abs(pitch - map.getPitch()) < 1) return;
   map.easeTo({ center: [S.pos.lng, S.pos.lat], zoom, pitch, bearing, padding: pad(),
                duration: instant ? 0 : (driving ? 1000 : 500), easing: t => t, essential: true });
 }

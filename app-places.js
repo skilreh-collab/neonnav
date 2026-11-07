@@ -5,7 +5,17 @@
 /* =================================================================
    ZIEL, VORSCHAU, START, ANKUNFT
    ================================================================= */
-let destMarker = null, startMarker = null;
+let destMarker = null, startMarker = null, viaMarkers = [];
+const MAX_VIAS = 5;
+let destSeq = 0;
+// Nummerierte Marker für die Zwischenziele
+function setViaMarkers() {
+  viaMarkers.forEach(m => m.remove());
+  viaMarkers = S.vias.map((p, i) => {
+    const el = document.createElement('div'); el.className = 'via-mk'; el.textContent = String(i + 1);
+    return new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(map);
+  });
+}
 // Marker „A“ für einen eigenen Startpunkt aus der Suche
 function setStartMarker(p) {
   if (startMarker) startMarker.remove();
@@ -17,7 +27,7 @@ function setStartMarker(p) {
 function setDestMarker(p) {
   if (destMarker) destMarker.remove();
   destMarker = null;
-  if (!p) { setStartMarker(null); return; }
+  if (!p) { setStartMarker(null); S.vias = []; setViaMarkers(); return; }
   const el = document.createElement('div'); el.className = 'dest-mk'; el.textContent = '🏁';
   destMarker = new maplibregl.Marker({ element: el }).setLngLat([p.lng, p.lat]).addTo(map);
 }
@@ -27,14 +37,18 @@ async function setDestination(place) {
   if (S.mode === 'nav' || S.mode === 'free') { toast(L('Erst die aktuelle Fahrt beenden')); return; }
   if (S.viewTrip) closeTripView();
   S.dest = place;
+  // Fußweg zum Fahrzeug: ohne Zwischenziele
+  if (place.walk) S.vias = [];
   if (!place.walk && !place.here) saveRecent(place);
   setDestMarker(place);
   setStartMarker(S.start);
+  setViaMarkers();
   renderFavBtn();
   $('destName').textContent = place.name;
   $('destSub').textContent = place.sub || '';
-  $('destFrom').textContent = S.start ? L('Von: {n}', { n: S.start.name }) : '';
-  $('destFrom').classList.toggle('hidden', !S.start);
+  const fromLine = [S.start ? L('Von: {n}', { n: S.start.name }) : '', S.vias.length ? L('Über: {n}', { n: S.vias.map(v => v.name).join(' → ') }) : ''].filter(Boolean).join(' · ');
+  $('destFrom').textContent = fromLine;
+  $('destFrom').classList.toggle('hidden', !fromLine);
   $('routeCards').innerHTML = `<div class="text-center text-slate-400 py-4 font-game text-sm blink">${L('BERECHNE ROUTE…')}</div>`;
   $('goBtn').disabled = true;
   clearFuelStations(); S.routeWx = null;
@@ -48,9 +62,11 @@ async function setDestination(place) {
     return;
   }
   try {
-    const routes = await fetchRoutes(from, place);
-    if (S.mode !== 'preview') return;
-    S.routes = routes.map(prepareNav);
+    // Nur das Ergebnis der letzten Berechnung zählt (z. B. nach schnellem Hinzufügen mehrerer Zwischenziele)
+    const vias = S.vias.slice(), seq = ++destSeq;
+    const routes = await fetchRoutes(from, place, vias);
+    if (S.mode !== 'preview' || seq !== destSeq) return;
+    S.routes = routes.map(r => markStops(prepareNav(r, true), vias));
     S.routeIdx = 0;
     $('goBtn').disabled = false;
     drawPreview(true);
@@ -121,6 +137,7 @@ function swapRoute() {
   const newDest = S.start || here;
   if (!newDest) { toast(L('Kein Standort – bitte GPS erlauben, dann erneut wählen.')); return; }
   S.start = S.dest.here ? null : S.dest;
+  S.vias.reverse();
   setDestination(newDest);
 }
 
@@ -156,7 +173,8 @@ function startNav() {
   fuelAnnounced = false;
   if (fuelOnRoute.length && N !== S.routes[0]) { fuelOnRoute = snapFuelTo(N, fuelOnRoute); showFuelMarkers(fuelOnRoute.slice(0, 10)); }
   if (S.trip && S.dest && S.dest.walk) S.trip.walk = true;
-  ghostStart(S.dest, N);
+  // Bestzeit-Geist nur für direkte Fahrten – mit Zwischenzielen ist die Strecke nicht vergleichbar
+  ghostStart(S.vias.length ? null : S.dest, N);
   loadLimitsAlongRoute(N);
   const wx = S.routeWx && S.routeWx.warn ? ' ' + L('Achtung, {w} {where}.', { w: S.routeWx.warn, where: S.routeWx.mid && wxWarn(S.routeWx.mid) ? L('unterwegs') : L('am Ziel') }) : '';
   speak(L('Los geht\'s. Ankunft in etwa {t}.', { t: fmtDur(N.duration).replace('h', L('Stunden')).replace('min', L('Minuten')) }) + wx + (S.ghost ? ' ' + L('Dein Geist fährt mit – schlag deine Bestzeit, aber fair!') : ''));
@@ -235,7 +253,7 @@ function endDrive(reason) {
     vehicle.charge = Math.max(0, Math.round((evTrip.start - chargeUsed(evTrip.m)) * 10) / 10);
     store.set(LS.vehicle, vehicle);
   }
-  const ghostMsg = reason === 'arrived' && trip && dest && !walk ? ghostFinish(dest, trip) : '';
+  const ghostMsg = reason === 'arrived' && trip && dest && !walk && !S.vias.length ? ghostFinish(dest, trip) : '';
   ghostStop();
   stopExplore();
   closeDetour();
@@ -269,19 +287,73 @@ function arrived() {
    SUCHE (Nominatim) & LETZTE ZIELE
    ================================================================= */
 let searchTimer = null, searchSeq = 0;
-let searchTarget = 'dest';   // welches Feld die Trefferliste gerade füllt: 'start' | 'dest'
-function openSearch() {
+let searchTarget = 'dest';   // welches Feld die Trefferliste gerade füllt: 'start' | 'via' | 'dest'
+let searchDirty = false;     // Start oder Zwischenziele in der Suche geändert, während schon eine Route angezeigt wird
+// via: direkt ein Zwischenziel suchen (aus der Routenvorschau)
+function openSearch(via) {
   $('searchPanel').classList.remove('hidden');
-  $('searchInput').value = '';
+  $('searchInput').value = via && S.dest ? S.dest.name : '';
   $('startInput').value = S.start ? S.start.name : '';
-  searchTarget = 'dest';
+  $('viaInput').value = '';
+  searchDirty = false;
+  showViaInput(!!via);
+  searchTarget = via ? 'via' : 'dest';
+  renderVias();
   renderRecentsList();
-  setTimeout(() => $('searchInput').focus(), 50);
+  setTimeout(() => $(via ? 'viaInput' : 'searchInput').focus(), 50);
 }
-function closeSearch() { $('searchPanel').classList.add('hidden'); $('searchInput').blur(); $('startInput').blur(); }
+function closeSearch() {
+  $('searchPanel').classList.add('hidden');
+  ['searchInput', 'startInput', 'viaInput'].forEach(id => $(id).blur());
+  showViaInput(false);
+}
+function showViaInput(on) {
+  $('viaRow').classList.toggle('hidden', !on);
+  $('viaAdd').classList.toggle('hidden', on || S.vias.length >= MAX_VIAS);
+}
+// Liste der gewählten Zwischenziele zwischen Start und Ziel, jeweils mit ✕ zum Entfernen
+function renderVias() {
+  const box = $('viaList');
+  box.innerHTML = '';
+  S.vias.forEach((p, i) => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+    row.innerHTML = `<div class="flex-1 min-w-0 h-12 rounded-2xl bg-slate-900 border border-amber-300/40 px-3 flex items-center gap-2">
+      <span class="text-xs font-black text-amber-300">${i + 1}</span><span class="truncate text-white">${esc(p.name)}</span></div>`;
+    const del = document.createElement('button');
+    del.className = 'h-10 w-10 shrink-0 rounded-full bg-slate-800 text-lg';
+    del.textContent = '✕';
+    del.setAttribute('aria-label', L('Zwischenziel entfernen'));
+    del.onclick = () => { S.vias.splice(i, 1); searchDirty = true; renderVias(); };
+    row.appendChild(del);
+    box.appendChild(row);
+  });
+  showViaInput(!$('viaRow').classList.contains('hidden') && S.vias.length < MAX_VIAS);
+  // Trefferliste füllt den Platz unter den Eingabefeldern, egal wie viele Zwischenziele es gibt
+  const head = $('searchPanel').firstElementChild;
+  $('searchResults').style.maxHeight = `calc(100dvh - env(safe-area-inset-top) - ${head.offsetHeight + 24}px)`;
+}
+function addViaField() {
+  if (S.vias.length >= MAX_VIAS) return;
+  showViaInput(true);
+  $('viaInput').focus();
+}
 function pickPlace(p) {
+  if (searchTarget === 'via') {
+    S.vias.push({ name: p.name, sub: p.sub || '', lat: p.lat, lng: p.lng });
+    $('viaInput').value = '';
+    showViaInput(false);
+    searchTarget = 'dest';
+    // Route wird schon angezeigt: gleich mit dem neuen Zwischenziel neu berechnen
+    if (S.mode === 'preview' && S.dest) { setDestination(S.dest); return; }
+    renderVias();
+    renderRecentsList();
+    $('searchInput').focus();
+    return;
+  }
   if (searchTarget !== 'start') { setDestination(p); return; }
   S.start = p.here ? null : p;
+  searchDirty = true;
   $('startInput').value = S.start ? S.start.name : '';
   searchTarget = 'dest';
   renderRecentsList();
@@ -392,6 +464,7 @@ function renderFavBtn() {
   $('favBtn').textContent = f ? FAV_ICON[f.type] : '☆';
   const loop = !!(S.dest && S.dest.loop);
   $('favBtn').classList.toggle('hidden', !!(S.dest && S.dest.walk) || loop);
+  $('viaBtn').classList.toggle('hidden', !!(S.dest && S.dest.walk) || loop || S.vias.length >= MAX_VIAS);
   // Rundtour: statt „Tauschen“ gibt es „Andere Runde“
   $('swapBtn').classList.toggle('hidden', loop);
   $('reloopBtn').classList.toggle('hidden', !loop);
@@ -417,15 +490,15 @@ function renderFavChips() {
     box.appendChild(b);
   };
   if (park) chip(`🅿️ ${L('Zum {x}', { x: esc(kindInfo(park.kind).label) })}${S.pos ? ` · ${fmtDist(haversine(S.pos.lat, S.pos.lng, park.lat, park.lng))}` : ''}`,
-    'bg-blue-500/20 border border-blue-400/50 text-blue-100', goToCar, () => { if (confirm(L('Parkplatz vergessen?'))) clearParking(); });
+    'bg-blue-500/20 border border-blue-400/50 text-blue-100', goToCar, async () => { if (await ask(L('Parkplatz vergessen?'))) clearParking(); });
   for (const t of ['home', 'work']) {
     const f = favs.find(x => x.type === t);
-    if (f) chip(`${FAV_ICON[t]} ${FAV_LABEL[t]}`, 'bg-cyan-400/10 border border-cyan-400/40', () => goFav(f), () => { if (confirm(L('{x} entfernen?', { x: FAV_LABEL[t] }))) removeFav(f.id); });
+    if (f) chip(`${FAV_ICON[t]} ${FAV_LABEL[t]}`, 'bg-cyan-400/10 border border-cyan-400/40', () => goFav(f), async () => { if (await ask(L('{x} entfernen?', { x: FAV_LABEL[t] }), L('Löschen'))) removeFav(f.id); });
     else chip(`${FAV_ICON[t]} ${FAV_LABEL[t]} +`, 'bg-slate-800/50 border border-dashed border-slate-600 text-slate-400',
       () => { openSearch(); toast(L('{x} festlegen: Ort suchen, dann ☆ antippen', { x: FAV_LABEL[t] })); });
   }
   favs.filter(f => f.type === 'fav').forEach(f => chip(`⭐ ${esc(f.name)}`, 'bg-amber-400/10 border border-amber-300/40', () => goFav(f),
-    () => { if (confirm(L('„{x}“ aus den Favoriten entfernen?', { x: f.name }))) removeFav(f.id); }));
+    async () => { if (await ask(L('„{x}“ aus den Favoriten entfernen?', { x: f.name }), L('Löschen'))) removeFav(f.id); }));
   if (fuelType()) chip('⛽ ' + L('Günstig tanken'), 'bg-lime-400/10 border border-lime-400/40 text-lime-100', nearbyFuel);
 }
 

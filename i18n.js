@@ -558,6 +558,16 @@ window.NN_I18N = {
     "Aktuelle GPS-Position": ["Current GPS position", "Posición GPS actual", "Position GPS actuelle", "Posizione GPS attuale", "Mevcut GPS konumu"],
     "Ziel: Adresse, Ort, Restaurant…": ["Destination: address, place, restaurant…", "Destino: dirección, lugar, restaurante…", "Destination : adresse, lieu, restaurant…", "Destinazione: indirizzo, luogo, ristorante…", "Hedef: adres, yer, restoran…"],
     "Von: {n}": ["From: {n}", "Desde: {n}", "Depuis : {n}", "Da: {n}", "Başlangıç: {n}"],
-    "Start und Ziel tauschen": ["Swap start and destination", "Intercambiar origen y destino", "Inverser départ et destination", "Inverti partenza e destinazione", "Başlangıç ve hedefi değiştir"]
+    "Start und Ziel tauschen": ["Swap start and destination", "Intercambiar origen y destino", "Inverser départ et destination", "Inverti partenza e destinazione", "Başlangıç ve hedefi değiştir"],
+    // --- Rückfrage ---
+    "Ja": ["Yes", "Sí", "Oui", "Sì", "Evet"],
+    "Beenden": ["End", "Finalizar", "Terminer", "Termina", "Bitir"],
+    // --- Zwischenziele ---
+    "+ Zwischenziel": ["+ Stop", "+ Parada", "+ Étape", "+ Tappa", "+ Ara durak"],
+    "Zwischenziel: Adresse, Ort…": ["Stop: address, place…", "Parada: dirección, lugar…", "Étape : adresse, lieu…", "Tappa: indirizzo, luogo…", "Ara durak: adres, yer…"],
+    "Zwischenziel entfernen": ["Remove stop", "Quitar parada", "Supprimer l'étape", "Rimuovi tappa", "Ara durağı kaldır"],
+    "Über: {n}": ["Via: {n}", "Por: {n}", "Via : {n}", "Via: {n}", "Üzerinden: {n}"],
+    "Zwischenziel erreichen": ["Reach your stop", "Llegar a la parada", "Arriver à l'étape", "Raggiungere la tappa", "Ara durağa varış"],
+    "erreichen Sie Ihr Zwischenziel": ["you will reach your stop", "llegará a su parada", "vous arriverez à votre étape", "raggiungerà la sua tappa", "ara durağınıza varacaksınız"]
   }
 };

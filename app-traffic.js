@@ -175,11 +175,12 @@ function trafficTick(N) {
 // Alternativen ab hier rechnen; spart eine mindestens 5 Minuten, „Umfahren“ anbieten
 let detourBusy = false, detourOffer = null, detourTimer = 0;
 async function checkDetour(N) {
-  if (detourBusy || detourOffer || !S.pos || !S.dest || S.nav !== N || S.rerouting || N.loop) return;
+  // Mit offenen Zwischenzielen liefert OSRM keine Alternativen – dann keine Umfahrung anbieten
+  if (detourBusy || detourOffer || !S.pos || !S.dest || S.nav !== N || S.rerouting || N.loop || stopsAhead(N).length) return;
   if (N.detourAskedAt && Date.now() - N.detourAskedAt < 10 * 60000) return;
   detourBusy = true;
   try {
-    const routes = (await fetchRoutes(S.pos, S.dest)).map(prepareNav);
+    const routes = (await fetchRoutes(S.pos, S.dest)).map(r => prepareNav(r));
     await loadTrafficForRoutes(routes);
     if (S.nav !== N) return;
     const remain = Math.max(0, N.total - N.along);

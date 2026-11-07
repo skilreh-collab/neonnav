@@ -205,13 +205,15 @@ function ghostFinish(dest, trip) {
 /* =================================================================
    ROUTING (OSRM) & NAVIGATIONSLOGIK
    ================================================================= */
-async function fetchRoutes(from, to) {
+// vias: optionale Zwischenziele in Fahrreihenfolge. OSRM liefert Alternativen nur bei zwei Punkten.
+async function fetchRoutes(from, to, vias = []) {
   let lastErr;
+  const coords = [from].concat(vias, [to]).map(p => `${p.lng},${p.lat}`).join(';');
   for (const base of ROUTERS[to.walk ? 'foot' : profileOf(vehicle)]) {
     // Zeitlimit je Server – hängt einer (Funkloch, Überlastung), kommt sofort der nächste dran
-    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 9000);
+    const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), vias.length ? 15000 : 9000);
     try {
-      const url = `${base}${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson&steps=true&alternatives=true`;
+      const url = `${base}${coords}?overview=full&geometries=geojson&steps=true&alternatives=${vias.length ? 'false' : 'true'}`;
       const r = await fetch(url, { signal: ctl.signal });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const j = await r.json();
@@ -223,13 +225,15 @@ async function fetchRoutes(from, to) {
   throw lastErr;
 }
 
-function prepareNav(route) {
+// keepVias: Ankunft an Zwischenzielen als eigenes Manöver behalten (mit Ansage), sonst – z. B. bei der Rundtour – weglassen
+function prepareNav(route, keepVias) {
   const coords = route.geometry.coordinates, cum = [0];
   for (let i = 1; i < coords.length; i++) cum[i] = cum[i - 1] + haversine(coords[i - 1][1], coords[i - 1][0], coords[i][1], coords[i][0]);
   const total = cum[cum.length - 1] || 1;
-  // Bei Routen über Zwischenpunkte (Rundtour) die „Ankunft/Abfahrt“ an jedem Zwischenpunkt weglassen
+  // Bei Routen über Zwischenpunkte die „Abfahrt“ an jedem Zwischenpunkt weglassen, die „Ankunft“ nur bei echten Zwischenzielen behalten
   const legs = route.legs, steps = legs.flatMap((l, li) => l.steps.filter(s =>
-    !(li < legs.length - 1 && s.maneuver.type === 'arrive') && !(li > 0 && s.maneuver.type === 'depart')));
+    !(li < legs.length - 1 && s.maneuver.type === 'arrive' && !keepVias) && !(li > 0 && s.maneuver.type === 'depart'))
+    .map(s => li < legs.length - 1 && s.maneuver.type === 'arrive' ? Object.assign({}, s, { via: true }) : s));
   const sumSteps = steps.reduce((a, s) => a + s.distance, 0) || 1, k = total / sumSteps;
   const stepStart = [];
   let acc = 0;
@@ -239,6 +243,13 @@ function prepareNav(route) {
   computeRouteHazards(N);
   return N;
 }
+// Zwischenziele mit ihrer Position entlang der Route merken (für Neuberechnung und Anzeige)
+function markStops(N, stops) {
+  N.stops = stops.map(v => { const sn = snapToRoute(N, v.lat, v.lng, true); return Object.assign({}, v, { along: sn ? sn.along : 0 }); });
+  return N;
+}
+// Noch nicht erreichte Zwischenziele
+const stopsAhead = N => (N && N.stops ? N.stops.filter(v => v.along > N.along + 30) : []);
 
 // Position auf die Route projizieren (lokale Meter-Ebene)
 function snapToRoute(N, lat, lng, full) {
@@ -334,7 +345,7 @@ function streetOf(step) {
 function action(step) {
   const m = step.maneuver, t = m.type, mod = m.modifier || 'straight', left = mod.includes('left'), side = left ? L('links') : L('rechts');
   switch (t) {
-    case 'arrive': return L('Ziel erreichen');
+    case 'arrive': return step.via ? L('Zwischenziel erreichen') : L('Ziel erreichen');
     case 'depart': return L('Losfahren');
     case 'roundabout': case 'rotary': return m.exit ? L('Im Kreisverkehr {o} Ausfahrt', { o: ORD[m.exit] || m.exit + '.' }) : L('In den Kreisverkehr');
     case 'exit roundabout': case 'exit rotary': return L('Kreisverkehr verlassen');
@@ -355,7 +366,7 @@ function subline(step) {
 }
 function speechPhrase(step) {
   const m = step.maneuver;
-  if (m.type === 'arrive') return L('erreichen Sie Ihr Ziel');
+  if (m.type === 'arrive') return step.via ? L('erreichen Sie Ihr Zwischenziel') : L('erreichen Sie Ihr Ziel');
   let p = action(step);
   p = p.charAt(0).toLowerCase() + p.slice(1);
   if ((m.type === 'roundabout' || m.type === 'rotary') && m.exit) p = L('im Kreisverkehr die {o} Ausfahrt nehmen', { o: ORD[m.exit] || m.exit + '.' });
@@ -375,7 +386,7 @@ const ICON = {
 };
 function iconFor(step, color = '#00e5ff') {
   const t = step.maneuver.type, mod = step.maneuver.modifier || 'straight';
-  if (t === 'arrive') return '<span style="font-size:36px;line-height:1">🏁</span>';
+  if (t === 'arrive') return `<span style="font-size:36px;line-height:1">${step.via ? '📍' : '🏁'}</span>`;
   let key = 'straight';
   if (t === 'roundabout' || t === 'rotary' || t === 'exit roundabout' || t === 'exit rotary') key = 'round';
   else if (mod === 'uturn') key = 'uturn';
@@ -475,12 +486,13 @@ function updateNextHazard() {
 
 function voiceLogic(N, ni, d) {
   const step = N.steps[ni];
-  if (step.maneuver.type === 'arrive' && d < 60) return; // Ankunft separat
+  const final = step.maneuver.type === 'arrive' && !step.via;
+  if (final && d < 60) return; // Ankunft separat
   const st = N.announced[ni] || (N.announced[ni] = {});
   const fast = S.speed > 80;
   const far = fast ? 1200 : 500, near = fast ? 400 : 180, now = fast ? 90 : 45;
   const phrase = speechPhrase(step);
-  if (d <= now && !st.now) { st.now = st.near = st.far = true; speak(step.maneuver.type === 'arrive' ? L('Gleich erreichen Sie Ihr Ziel') : L('Jetzt {p}', { p: phrase })); }
+  if (d <= now && !st.now) { st.now = st.near = st.far = true; speak(final ? L('Gleich erreichen Sie Ihr Ziel') : L('Jetzt {p}', { p: phrase })); }
   else if (d <= near && d > now && !st.near) { st.near = st.far = true; speak(L('In {d} {p}', { d: speechDist(d), p: phrase })); }
   else if (d <= far && d > near && !st.far) { st.far = true; speak(L('In {d} {p}', { d: speechDist(d), p: phrase })); }
 }
@@ -494,13 +506,16 @@ async function reroute() {
   try {
     // Rundtour: zurück auf die Runde (über die restlichen Zwischenpunkte), nicht direkt nach Hause
     const loop = S.nav && S.nav.loop ? S.nav : null;
+    // Zwischenziele: nur die noch nicht erreichten wieder einplanen
+    const stops = loop ? [] : stopsAhead(S.nav);
     const routes = loop ? [await fetchViaRoute([S.pos].concat(loop.vias.filter(v => v.along > loop.along + 300), [S.dest]))]
-      : await fetchRoutes(S.pos, S.dest);
+      : await fetchRoutes(S.pos, S.dest, stops);
     if (S.mode !== 'nav') return;
     if (S.rerouteFails) speak(L('Neue Route gefunden'));
     S.rerouteFails = 0;
-    S.nav = prepareNav(routes[0]);
+    S.nav = prepareNav(routes[0], !loop);
     if (loop) markLoop(S.nav, loop.vias.filter(v => v.along > loop.along + 300).map(v => ({ lat: v.lat, lng: v.lng })));
+    if (stops.length) markStops(S.nav, stops);
     const RN = S.nav;
     loadTrafficForRoutes([RN]).then(() => { if (S.nav === RN) showTraffic(RN.traffic || []); }).catch(() => {});
     setRouteOnMap(S.nav);
